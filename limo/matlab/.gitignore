@@ -1,0 +1,5 @@
+# Simulink build artifacts
+slprj/
+*.slxc
+*.autosave
+*.asv

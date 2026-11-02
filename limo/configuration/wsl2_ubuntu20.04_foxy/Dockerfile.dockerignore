@@ -1,0 +1,37 @@
+# Exclude everything by default
+**
+
+# Dockerfile and helper scripts
+!configuration/
+!configuration/wsl2_ubuntu20.04_foxy/
+!configuration/wsl2_ubuntu20.04_foxy/Dockerfile
+!configuration/wsl2_ubuntu20.04_foxy/ros-entrypoint.sh
+!configuration/wsl2_ubuntu20.04_foxy/workspace-deps.sh
+!configuration/wsl2_ubuntu20.04_foxy/collect-manifests.py
+
+# LIMO ROS 2 package manifests
+!ros2_foxy/
+!ros2_foxy/limo_ros2/
+!ros2_foxy/limo_ros2/**/
+!ros2_foxy/limo_ros2/**/package.xml
+
+# Camera ROS 2 package manifests
+!ros2_foxy/ros2_astra_camera/
+!ros2_foxy/ros2_astra_camera/**/
+!ros2_foxy/ros2_astra_camera/**/package.xml
+
+# LiDAR ROS 2 driver manifest
+!ros2_foxy/ydlidar_ros2_driver/
+!ros2_foxy/ydlidar_ros2_driver/package.xml
+
+# Full YDLidar SDK source, needed for its CMake build
+!ros2_foxy/YDLidar-SDK/
+!ros2_foxy/YDLidar-SDK/**
+
+# Exclude generated files and Git metadata
+**/.git
+**/__pycache__
+**/build
+**/install
+**/log
+**/COLCON_IGNORE
