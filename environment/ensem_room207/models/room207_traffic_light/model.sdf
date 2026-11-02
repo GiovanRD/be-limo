@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="room207_traffic_light">
+    <static>true</static>
+    <link name="link">
+      <collision name="pole_collision"><pose>0 0 0.15 0 0 0</pose><geometry><cylinder><radius>0.012</radius><length>0.3</length></cylinder></geometry></collision>
+      <visual name="pole_visual"><pose>0 0 0.15 0 0 0</pose><geometry><cylinder><radius>0.012</radius><length>0.3</length></cylinder></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      <collision name="base_collision"><pose>0 0 0.005 0 0 0</pose><geometry><box><size>0.08 0.08 0.01</size></box></geometry></collision>
+      <visual name="base_visual"><pose>0 0 0.005 0 0 0</pose><geometry><box><size>0.08 0.08 0.01</size></box></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      <collision name="head_collision"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.05 0.06 0.15</size></box></geometry></collision>
+      <visual name="head_visual"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.05 0.06 0.15</size></box></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      <visual name="red_front_visual"><pose>0.026 0 0.42 0 1.5708 0</pose><geometry><cylinder><radius>0.017</radius><length>0.006</length></cylinder></geometry><material><ambient>1 0.05 0.05 1</ambient><diffuse>1 0.05 0.05 1</diffuse><emissive>1 0 0 1</emissive></material></visual>
+      <visual name="amber_front_visual"><pose>0.026 0 0.375 0 1.5708 0</pose><geometry><cylinder><radius>0.017</radius><length>0.006</length></cylinder></geometry><material><ambient>0.30 0.20 0.02 1</ambient><diffuse>0.30 0.20 0.02 1</diffuse></material></visual>
+      <visual name="green_front_visual"><pose>0.026 0 0.33 0 1.5708 0</pose><geometry><cylinder><radius>0.017</radius><length>0.006</length></cylinder></geometry><material><ambient>0.02 0.25 0.05 1</ambient><diffuse>0.02 0.25 0.05 1</diffuse></material></visual>
+      <visual name="red_back_visual"><pose>-0.026 0 0.42 0 1.5708 0</pose><geometry><cylinder><radius>0.017</radius><length>0.006</length></cylinder></geometry><material><ambient>1 0.05 0.05 1</ambient><diffuse>1 0.05 0.05 1</diffuse><emissive>1 0 0 1</emissive></material></visual>
+      <visual name="amber_back_visual"><pose>-0.026 0 0.375 0 1.5708 0</pose><geometry><cylinder><radius>0.017</radius><length>0.006</length></cylinder></geometry><material><ambient>0.30 0.20 0.02 1</ambient><diffuse>0.30 0.20 0.02 1</diffuse></material></visual>
+      <visual name="green_back_visual"><pose>-0.026 0 0.33 0 1.5708 0</pose><geometry><cylinder><radius>0.017</radius><length>0.006</length></cylinder></geometry><material><ambient>0.02 0.25 0.05 1</ambient><diffuse>0.02 0.25 0.05 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>

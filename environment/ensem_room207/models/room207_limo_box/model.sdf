@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="room207_limo_box">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision"><pose>0 0 0.130 0 0 0</pose><geometry><box><size>0.400 0.600 0.260</size></box></geometry></collision>
+      <visual name="bottom_visual"><pose>0.000 0.000 0.007 0 0 0</pose><geometry><box><size>0.400 0.600 0.015</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="wall_front_visual"><pose>-0.193 0.000 0.130 0 0 0</pose><geometry><box><size>0.015 0.600 0.260</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="wall_back_visual"><pose>0.193 0.000 0.130 0 0 0</pose><geometry><box><size>0.015 0.600 0.260</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="wall_left_visual"><pose>0.000 -0.292 0.130 0 0 0</pose><geometry><box><size>0.370 0.015 0.260</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="wall_right_visual"><pose>0.000 0.292 0.130 0 0 0</pose><geometry><box><size>0.370 0.015 0.260</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="rim_front_visual"><pose>-0.200 0.000 0.250 0 0 0</pose><geometry><box><size>0.030 0.620 0.020</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="rim_back_visual"><pose>0.200 0.000 0.250 0 0 0</pose><geometry><box><size>0.030 0.620 0.020</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="rim_left_visual"><pose>0.000 -0.300 0.250 0 0 0</pose><geometry><box><size>0.420 0.030 0.020</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="rim_right_visual"><pose>0.000 0.300 0.250 0 0 0</pose><geometry><box><size>0.420 0.030 0.020</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="divider_visual"><pose>0.000 0.000 0.090 0 0 0</pose><geometry><box><size>0.370 0.012 0.160</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="foam_0_visual"><pose>0.000 -0.150 0.060 0 0 0</pose><geometry><box><size>0.370 0.279 0.090</size></box></geometry><material><ambient>0.18 0.18 0.19 1</ambient><diffuse>0.18 0.18 0.19 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="foam_1_visual"><pose>0.000 0.150 0.060 0 0 0</pose><geometry><box><size>0.370 0.279 0.090</size></box></geometry><material><ambient>0.18 0.18 0.19 1</ambient><diffuse>0.18 0.18 0.19 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="handle_left_visual"><pose>0.000 -0.315 0.200 0 0 0</pose><geometry><box><size>0.140 0.030 0.025</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+      <visual name="handle_right_visual"><pose>0.000 0.315 0.200 0 0 0</pose><geometry><box><size>0.140 0.030 0.025</size></box></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.07 0.07 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular></material></visual>
+    </link>
+  </model>
+</sdf>

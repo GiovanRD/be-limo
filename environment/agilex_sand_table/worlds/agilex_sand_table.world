@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+
+<sdf version="1.7">
+  <world name="agilex_sand_table_world">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Floor under the 5 mm plates -->
+    <include>
+      <uri>model://ground_plane</uri>
+      <pose>0 0 -0.005 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://agilex_sand_table</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>

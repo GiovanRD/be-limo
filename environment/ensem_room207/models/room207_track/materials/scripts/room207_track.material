@@ -1,0 +1,26 @@
+// QCar track map (SDCS_MapLayout.png from qcar_large_track).
+// The texture is fully emissive, so it keeps the exact colours of the PNG,
+// and the lights only add specular highlights, like the glare of the
+// fluorescent tubes on the real (slightly glossy) mat.
+material Room207/TrackMap
+{
+  technique
+  {
+    pass
+    {
+      lighting on
+      ambient 0 0 0
+      diffuse 0 0 0
+      emissive 1 1 1
+      specular 0.45 0.45 0.45 1 90
+      max_lights 24
+
+      texture_unit
+      {
+        texture SDCS_MapLayout.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}

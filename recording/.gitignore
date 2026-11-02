@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Editor
+.vscode/
+.idea/

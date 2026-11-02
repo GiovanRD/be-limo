@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+
+<!--
+  AgileX LIMO simulation table ("sand table"): 16 plates of 750 x 750 x 5 mm
+  (3.0 m x 3.0 m) surrounded by 200 mm high hoardings.
+
+  The table is centred on the model origin; its top surface is at z = 0.
+  The map texture is the top view of the table published by AgileX
+  (agilexrobotics/limo-doc, MIT licence, see materials/textures/LICENSE).
+-->
+
+<sdf version="1.7">
+  <model name="agilex_sand_table">
+
+    <!-- The model is static (does not move) -->
+    <static>true</static>
+
+    <link name="table">
+
+      <!-- ===================== Bottom plates ===================== -->
+
+      <!-- Collision geometry: the 5 mm plates, top surface at z = 0 -->
+      <collision name="plates_collision">
+        <pose>0 0 -0.0025 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>3.0 3.0 0.005</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Visual geometry: the sides of the plates -->
+      <visual name="plates_visual">
+        <pose>0 0 -0.0025 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>3.0 3.0 0.005</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Visual geometry: the map printed on the plates, just above them -->
+      <visual name="map_visual">
+        <pose>0 0 0.0002 0 0 0</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>3.0 3.0</size>
+          </plane>
+        </geometry>
+        <material>
+          <script>
+            <uri>model://agilex_sand_table/materials/scripts</uri>
+            <uri>model://agilex_sand_table/materials/textures</uri>
+            <name>AgileX/SandTable</name>
+          </script>
+        </material>
+      </visual>
+
+      <!-- ===================== Hoardings ===================== -->
+
+      <!-- 4 panels of 750 x 200 x 5 mm per side, modelled as one wall per
+           side, standing just outside the plates -->
+
+      <collision name="wall_north_collision">
+        <pose>0 1.5025 0.1 0 0 0</pose>
+        <geometry><box><size>3.01 0.005 0.2</size></box></geometry>
+      </collision>
+      <visual name="wall_north_visual">
+        <pose>0 1.5025 0.1 0 0 0</pose>
+        <geometry><box><size>3.01 0.005 0.2</size></box></geometry>
+        <material>
+          <ambient>0.9 0.9 0.9 1</ambient>
+          <diffuse>0.95 0.95 0.95 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="wall_south_collision">
+        <pose>0 -1.5025 0.1 0 0 0</pose>
+        <geometry><box><size>3.01 0.005 0.2</size></box></geometry>
+      </collision>
+      <visual name="wall_south_visual">
+        <pose>0 -1.5025 0.1 0 0 0</pose>
+        <geometry><box><size>3.01 0.005 0.2</size></box></geometry>
+        <material>
+          <ambient>0.9 0.9 0.9 1</ambient>
+          <diffuse>0.95 0.95 0.95 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="wall_east_collision">
+        <pose>1.5025 0 0.1 0 0 0</pose>
+        <geometry><box><size>0.005 3.01 0.2</size></box></geometry>
+      </collision>
+      <visual name="wall_east_visual">
+        <pose>1.5025 0 0.1 0 0 0</pose>
+        <geometry><box><size>0.005 3.01 0.2</size></box></geometry>
+        <material>
+          <ambient>0.9 0.9 0.9 1</ambient>
+          <diffuse>0.95 0.95 0.95 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="wall_west_collision">
+        <pose>-1.5025 0 0.1 0 0 0</pose>
+        <geometry><box><size>0.005 3.01 0.2</size></box></geometry>
+      </collision>
+      <visual name="wall_west_visual">
+        <pose>-1.5025 0 0.1 0 0 0</pose>
+        <geometry><box><size>0.005 3.01 0.2</size></box></geometry>
+        <material>
+          <ambient>0.9 0.9 0.9 1</ambient>
+          <diffuse>0.95 0.95 0.95 1</diffuse>
+        </material>
+      </visual>
+
+    </link>
+
+  </model>
+</sdf>

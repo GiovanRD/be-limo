@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+
+<!-- Package format to use for a ROS2 package. -->
+<package format="3">         
+
+  <!-- Package name and vestion that ROS2 will used in "ros2 pkg list" -->
+  <name>qcar_large_track</name>
+  <version>0.0.1</version>
+
+  <description>
+    Gazebo environment for the QCar large track.
+  </description>
+
+  <maintainer email="jeremie.kreiss@univ-lorraine.fr">
+    Jérémie Kreiss
+  </maintainer>
+
+<!-- License information -->
+  <license>Apache-2.0</license>
+
+<!-- Build tool dependencies : ament_cmake allows to use CMake in ROS2 systems -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+<!-- Dependencies for the package at the execution-->
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

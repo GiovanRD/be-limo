@@ -1,0 +1,13 @@
+material QCar/SDCS_Map
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture SDCS_MapLayout.png
+      }
+    }
+  }
+}

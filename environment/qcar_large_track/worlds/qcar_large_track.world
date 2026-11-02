@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<sdf version="1.7">
+  <world name="qcar_large_track_world">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://qcar_large_track</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>

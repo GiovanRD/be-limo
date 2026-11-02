@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+
+<!-- Package format to use for a ROS2 package. -->
+<package format="3">
+
+  <!-- Package name and version that ROS2 will use in "ros2 pkg list" -->
+  <name>agilex_sand_table</name>
+  <version>0.0.1</version>
+
+  <description>
+    Gazebo environment for the AgileX LIMO simulation table (sand table).
+  </description>
+
+  <maintainer email="jeremie.kreiss@univ-lorraine.fr">
+    Jérémie Kreiss
+  </maintainer>
+
+<!-- License information: the map texture is from AgileX (MIT, see models/agilex_sand_table/materials/textures/LICENSE) -->
+  <license>Apache-2.0</license>
+  <license>MIT</license>
+
+<!-- Build tool dependencies : ament_cmake allows to use CMake in ROS2 systems -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+<!-- Dependencies for the package at the execution-->
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

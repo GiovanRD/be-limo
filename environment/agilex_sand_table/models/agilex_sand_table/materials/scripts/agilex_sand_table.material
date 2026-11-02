@@ -1,0 +1,13 @@
+material AgileX/SandTable
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture agilex_sand_table.png
+      }
+    }
+  }
+}

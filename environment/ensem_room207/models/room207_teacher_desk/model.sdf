@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="room207_teacher_desk">
+    <static>true</static>
+    <link name="link">
+      <collision name="top_collision"><pose>0 0 0.725 0 0 0</pose><geometry><box><size>1.00 0.60 0.03</size></box></geometry></collision>
+      <visual name="top_visual"><pose>0 0 0.725 0 0 0</pose><geometry><box><size>1.00 0.60 0.03</size></box></geometry><material><ambient>0.48 0.49 0.50 1</ambient><diffuse>0.48 0.49 0.50 1</diffuse></material></visual>
+      <visual name="edge_front_visual"><pose>0.506 0.000 0.725 0 0 0</pose><geometry><box><size>0.012 0.624 0.030</size></box></geometry><material><ambient>0.82 0.64 0.42 1</ambient><diffuse>0.82 0.64 0.42 1</diffuse></material></visual>
+      <visual name="edge_back_visual"><pose>-0.506 0.000 0.725 0 0 0</pose><geometry><box><size>0.012 0.624 0.030</size></box></geometry><material><ambient>0.82 0.64 0.42 1</ambient><diffuse>0.82 0.64 0.42 1</diffuse></material></visual>
+      <visual name="edge_left_visual"><pose>0.000 0.306 0.725 0 0 0</pose><geometry><box><size>1.000 0.012 0.030</size></box></geometry><material><ambient>0.82 0.64 0.42 1</ambient><diffuse>0.82 0.64 0.42 1</diffuse></material></visual>
+      <visual name="edge_right_visual"><pose>0.000 -0.306 0.725 0 0 0</pose><geometry><box><size>1.000 0.012 0.030</size></box></geometry><material><ambient>0.82 0.64 0.42 1</ambient><diffuse>0.82 0.64 0.42 1</diffuse></material></visual>
+      <collision name="leg_0_collision"><pose>0.44 0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry></collision>
+      <visual name="leg_0_visual"><pose>0.44 0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry><material><ambient>0.72 0.73 0.74 1</ambient><diffuse>0.72 0.73 0.74 1</diffuse></material></visual>
+      <collision name="leg_1_collision"><pose>0.44 -0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry></collision>
+      <visual name="leg_1_visual"><pose>0.44 -0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry><material><ambient>0.72 0.73 0.74 1</ambient><diffuse>0.72 0.73 0.74 1</diffuse></material></visual>
+      <collision name="leg_2_collision"><pose>-0.44 0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry></collision>
+      <visual name="leg_2_visual"><pose>-0.44 0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry><material><ambient>0.72 0.73 0.74 1</ambient><diffuse>0.72 0.73 0.74 1</diffuse></material></visual>
+      <collision name="leg_3_collision"><pose>-0.44 -0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry></collision>
+      <visual name="leg_3_visual"><pose>-0.44 -0.24 0.355 0 0 0</pose><geometry><cylinder><radius>0.025</radius><length>0.71</length></cylinder></geometry><material><ambient>0.72 0.73 0.74 1</ambient><diffuse>0.72 0.73 0.74 1</diffuse></material></visual>
+      <visual name="laptop_base_visual"><pose>0 0.05 0.75 0 0 0</pose><geometry><box><size>0.34 0.24 0.02</size></box></geometry><material><ambient>0.25 0.26 0.28 1</ambient><diffuse>0.25 0.26 0.28 1</diffuse></material></visual>
+      <visual name="laptop_screen_visual"><pose>0 0.17 0.87 -0.25 0 0</pose><geometry><box><size>0.34 0.01 0.23</size></box></geometry><material><ambient>0.25 0.26 0.28 1</ambient><diffuse>0.25 0.26 0.28 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>

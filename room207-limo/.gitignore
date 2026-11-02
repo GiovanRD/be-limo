@@ -1,0 +1,11 @@
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Generated analysis files
+results/*.pdf
+
+# Editor
+.vscode/
+.idea/
