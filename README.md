@@ -3,6 +3,9 @@
 Groupe 1 (BE 2026) : Crystal RIBU, Morgan HOFFMANN, Giovan ROCCA-DURINGER
 **LIMO n° 201 — IP 100.75.155.201 — poste BI-FDD-F-W253**
 
+> **Livrables 2 et 3** (planification, contrôle, détection en simulation ; interface de supervision) : voir **[`be_limo/README.md`](be_limo/README.md)**.
+> Lancement rapide, dans le conteneur : `ros2 launch be_limo sim_l2.launch.py`
+
 Ce guide se suit **dans l'ordre**. Chaque étape a le même format :
 
 > 📍 **Où** : sur quelle machine et dans quel terminal
@@ -500,6 +503,7 @@ Repérés dans les sources fournies par le labo :
 
 | Dossier | Contenu |
 |---|---|
+| `be_limo/` | **Notre paquet** : livrables 2 (planification, contrôle, détection) et 3 (supervision) |
 | `limo/` | Logiciel LIMO (ROS 2 Foxy/Humble, MATLAB, configuration) |
 | `room207-limo/` | Simulation salle 207 |
 | `environment/` | Mondes Gazebo |

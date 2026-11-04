@@ -1,0 +1,50 @@
+# Paramètres des noeuds be_limo (simulation et robot réel).
+# Les fichiers de lancement chargent ce fichier ; modifier ici, pas dans le code.
+
+global_planner:
+  ros__parameters:
+    loop: false
+    heading_tolerance_deg: 60.0
+
+local_controller:
+  ros__parameters:
+    rate: 20.0
+    speed: 0.25               # vitesse nominale [m/s]
+    max_steering: 0.41        # braquage max [rad] (23.6 deg, limite de l'adaptateur Gazebo)
+    lookahead_min: 0.25       # distance de visée à l'arrêt [m]
+    lookahead_gain: 0.6       # Ld = lookahead_min + gain * v
+    obstacle_stop: 0.35       # arrêt si obstacle plus près [m]
+    obstacle_resume: 0.45     # redémarrage quand l'obstacle est plus loin [m]
+    obstacle_slow: 0.80       # ralentissement en dessous [m]
+    red_light_min: 1.0        # un feu rouge est respecté s'il est vu entre ces distances [m]
+    red_light_distance: 1.4
+    green_light_distance: 2.0
+    red_light_timeout: 2.0    # [s] sans feu rouge visible avant de repartir
+    stop_sign_distance: 0.60  # [m]
+    stop_sign_duration: 2.0   # arrêt au stop [s]
+    stop_sign_cooldown: 6.0   # stop ignoré ensuite [s]
+    confirm_frames: 2         # images consécutives pour valider une détection
+    use_lane_correction: false
+    lane_gain: 0.8
+    pose_timeout: 0.5
+
+obstacle_detector:
+  ros__parameters:
+    half_width: 0.16          # demi-largeur du couloir surveillé [m]
+    max_range: 1.5
+    laser_x: 0.1236           # position du lidar dans base_link [m]
+
+vision_node:
+  ros__parameters:
+    image_topic: /rgb/image_raw
+    hfov: 1.0471976           # champ horizontal [rad] (60 deg)
+    camera_x: 0.10
+    camera_height: 0.21       # hauteur de la caméra au-dessus du sol [m]
+    camera_pitch: 0.0         # inclinaison vers le bas [rad]
+    process_every: 1
+    debug_every: 2
+
+traffic_light_manager:
+  ros__parameters:
+    period: 12.0              # durée d'une phase des feux [s]
+    mode: auto
