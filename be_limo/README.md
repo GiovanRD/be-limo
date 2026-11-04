@@ -190,7 +190,7 @@ ros2 topic pub --once /supervisor/command std_msgs/String "{data: '{\"cmd\": \"e
 
 **Caméra** : le pilote `astra_camera` n'est pas installé sur la LIMO 201. Sans lui, la vision est désactivée (`use_camera:=false` par défaut) ; le robot fait la planification, le contrôle et l'arrêt aux obstacles. Une fois le pilote installé (`build-robot.sh` sans `--without-camera`) : `use_camera:=true`, puis régler `camera_height` et `camera_pitch` dans `config/be_limo.yaml`.
 
-**Dérive** : sur le vrai robot, l'odométrie dérive (quelques cm par mètre). Pour recaler la position, utilise l'outil **2D Pose Estimate** de RViz, ou relance au nœud de départ. L'option `use_lane_correction: true` corrige la trajectoire avec la caméra (à tester une fois la caméra active).
+**Dérive** : sur le vrai robot, l'odométrie dérive (quelques cm par mètre). Pour recaler la position, utilise l'outil **2D Pose Estimate** de RViz, ou relance au nœud de départ. L'option `use_lane_correction: true` corrige la trajectoire avec la caméra (à tester une fois la caméra active). Pour une position qui ne dérive pas, utilise la **localisation lidar** (section 9).
 
 ---
 
@@ -225,7 +225,7 @@ Les algorithmes et les nœuds sont testés sur n'importe quel PC (Python 3, nump
 cd ~/ros2_ws/src/be-limo/be_limo
 python3 -m pytest -q test/
 ```
-✅ `8 passed`.
+✅ `9 passed`.
 
 | Test | Ce qui est vérifié |
 |---|---|
@@ -234,6 +234,7 @@ python3 -m pytest -q test/
 | `test_pure_pursuit_follows_the_demo_loop` | boucle complète en simulation cinématique, écart < 6 cm |
 | `test_corridor_geometry`, `test_obstacle_in_front_and_beside` | couloir du lidar, en ligne droite et en virage |
 | `test_lane_offset_and_signs` | décalage de voie à ±1,5 cm près, feux rouge et vert, stop, sur des images de synthèse |
+| `test_room_map_calibration` | lien carte de la salle ↔ carte de la piste (localisation lidar) |
 | `test_demo_loop` | **les vrais nœuds ROS ensemble** autour d'un robot simulé (lidar et caméra synthétiques) : stop, obstacle, feu rouge, arrivée. Résultat : écart max 4 cm, arrêt à 0,40 m de l'obstacle. |
 
 `test/offline_sim.py` est ce simulateur hors ligne (sans Gazebo), pratique pour essayer un changement en quelques secondes.
@@ -256,4 +257,62 @@ Limites :
 - Pas d'évitement d'obstacle : le robot **attend** que la voie se libère. Le graphe n'a presque jamais de voie parallèle pour contourner.
 - La détection de voie est fiable en ligne droite (±1,5 cm), approximative dans les virages serrés. Elle sert au suivi et au recalage, pas au pilotage seul.
 - Le panneau stop simulé est un disque (rouge bordé de blanc), pas un octogone.
-- Sur le vrai robot, la position vient de l'odométrie seule (pas de carte lidar). Elle dérive sur un long parcours.
+- Sur le vrai robot, sans la localisation lidar (section 9), la position vient de l'odométrie seule et dérive sur un long parcours.
+- La localisation lidar n'a pas encore été essayée sur le robot (section 9) : les réglages d'AMCL (`config/amcl.yaml`) seront peut-être à ajuster.
+
+---
+
+## 9. Localisation lidar (AMCL) : partir de n'importe où
+
+Avec l'odométrie seule, le robot ne sait où il est que si on le pose sur un nœud connu, et sa position dérive. Avec une **carte lidar de la salle**, il se localise en continu en comparant ce que voit le lidar (murs, tables, pieds de chaises) avec la carte.
+
+```text
+map (piste)  ──►  room_map (carte lidar de la salle)  ──►  odom  ──►  base_link
+   statique, calibré à la              AMCL                  limo_base
+   cartographie
+```
+
+Le lien entre la carte de la salle et celle de la piste se fait automatiquement : on commence la cartographie avec le robot posé sur un nœud connu, et la carte lidar démarre exactement là. Ce lien est enregistré dans `~/maps/salle207_track.yaml`.
+
+### 9.1. Faire la carte (une seule fois, environ 10 min)
+
+Pose le robot au **nœud 2**, bien centré, dans le sens de la flèche. La piste et la salle doivent être dans leur état habituel : les objets déplacés ensuite (sacs, chaises) gênent la localisation.
+
+📍 Robot, terminal 1 :
+```bash
+pkill -f limo_base; pkill -f ydlidar; pkill -f astra
+sudo chgrp dialout /dev/ttyTHS1 && sudo chmod 660 /dev/ttyTHS1
+ros2 launch be_limo mapping.launch.py start_node:=2 map:=~/maps/salle207.yaml
+```
+✅ `Calibration enregistrée : /home/jetson/maps/salle207_track.yaml`, puis `Localisé par le lidar`.
+
+📍 Robot, terminal 2 : pilote **lentement** sur toute la piste, en passant partout au moins une fois et en revenant à la fin près du départ (ça aide la carte à se refermer correctement).
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+Touche `x` plusieurs fois pour réduire la vitesse vers 0,15 m/s ; `i` avancer, `j`/`l` tourner, `k` stop.
+
+Pour voir la carte se construire : sur le PC, dans le conteneur, lance `rviz2`, mets **Fixed Frame** sur `room_map` et ajoute un affichage **Map** sur `/map`.
+
+📍 Robot, terminal 3, quand tout est parcouru : enregistrer la carte.
+```bash
+ros2 run nav2_map_server map_saver_cli -f ~/maps/salle207
+ls ~/maps
+```
+✅ `salle207.pgm`, `salle207.yaml`, `salle207_track.yaml`.
+
+Arrête ensuite le terminal 1 (Ctrl+C).
+
+### 9.2. Rouler avec la localisation lidar
+
+📍 Robot, robot posé **sur n'importe quel nœud**, par exemple le 9 :
+```bash
+ros2 launch be_limo real_l2.launch.py localization:=lidar map:=~/maps/salle207.yaml initial_node:=9 mission:=demo use_camera:=true
+```
+✅ `Pose initiale envoyée à AMCL`, puis `Localisé par le lidar : x=... y=...`, avec la position du nœud 9 (voir la carte).
+❌ `Calibration introuvable` : la carte n'a pas été faite, ou n'est pas à cet endroit (section 9.1).
+❌ Le robot ne se localise pas (reste sur `En attente de la localisation lidar`) : vérifie que le lidar tourne (`ros2 topic hz /scan`) et que la carte se charge (`ros2 topic echo /map --once | head`).
+
+Démarrage et arrêt comme en section 5. Robot posé ailleurs que sur un nœud : donne sa position avec **2D Pose Estimate** dans RViz (Fixed Frame `map`). Notre programme la transmet à AMCL.
+
+Vérifier que la localisation suit bien : pousse le robot à la main de 50 cm, ou fais-le rouler, et regarde que `ros2 topic echo /robot_pose` suit son déplacement réel.

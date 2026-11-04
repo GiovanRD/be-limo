@@ -1,0 +1,17 @@
+# Cartographie de la salle 207 (slam_toolbox), repère "room_map".
+# Chargé par mapping.launch.py, après les paramètres par défaut de slam_toolbox.
+
+slam_toolbox:
+  ros__parameters:
+    odom_frame: odom
+    map_frame: room_map
+    base_frame: base_link
+    scan_topic: /scan
+    mode: mapping
+    resolution: 0.05
+    max_laser_range: 8.0
+    minimum_travel_distance: 0.1
+    minimum_travel_heading: 0.15
+    map_update_interval: 2.0
+    transform_publish_period: 0.05
+    do_loop_closing: true

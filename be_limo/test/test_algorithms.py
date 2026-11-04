@@ -145,3 +145,21 @@ def test_lane_offset_and_signs(roadmap, texture):
     draw_stop_sign(img, cam, 0.8, -0.25)
     dets = detect_signs(img, cam)
     assert len(dets) == 1 and dets[0].kind == 'stop_sign'
+
+
+# ------------------------------------------------------------- localisation
+def test_room_map_calibration(tmp_path):
+    from be_limo.frames import calibration_path, compose, inverse, load_calibration, save_calibration
+    from be_limo.roadmap import node_poses
+    start = node_poses()[2]
+    path = calibration_path(str(tmp_path / 'salle207.yaml'))
+    assert path.endswith('salle207_track.yaml')
+    save_calibration(path, start, 2)
+    room_in_track = load_calibration(path)
+    assert room_in_track == pytest.approx(start, abs=1e-6)
+    # At the start of the mapping session the robot is at the room_map origin.
+    assert compose(room_in_track, (0.0, 0.0, 0.0)) == pytest.approx(start, abs=1e-6)
+    # Any track pose goes to room_map and back unchanged (initial pose for AMCL).
+    for pose in node_poses():
+        room = compose(inverse(room_in_track), pose)
+        assert compose(room_in_track, room) == pytest.approx(pose, abs=1e-9)
