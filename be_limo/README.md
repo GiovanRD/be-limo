@@ -46,6 +46,7 @@ SIMULATION     traffic_light_manager (allume les feux dans Gazebo)
 | `vision_node` | Voie, feux, panneaux stop (caméra) | `be_limo/vision_node.py`, `be_limo/lane_vision.py`, `be_limo/sign_vision.py` |
 | `traffic_light_manager` | Feux du carrefour dans Gazebo (simulation seulement) | `be_limo/traffic_light_manager.py` |
 | `supervisor` | Interface de supervision (livrable 3) | `be_limo/supervisor_gui.py` |
+| `teleop_web` | Téléopération web sur le vrai robot (section 10) | `be_limo/teleop_web_node.py`, `be_limo/teleop.py`, `web/teleop.html` |
 
 Tous les réglages sont dans **`config/be_limo.yaml`**.
 
@@ -225,7 +226,7 @@ Les algorithmes et les nœuds sont testés sur n'importe quel PC (Python 3, nump
 cd ~/ros2_ws/src/be-limo/be_limo
 python3 -m pytest -q test/
 ```
-✅ `9 passed`.
+✅ `17 passed`.
 
 | Test | Ce qui est vérifié |
 |---|---|
@@ -235,6 +236,7 @@ python3 -m pytest -q test/
 | `test_corridor_geometry`, `test_obstacle_in_front_and_beside` | couloir du lidar, en ligne droite et en virage |
 | `test_lane_offset_and_signs` | décalage de voie à ±1,5 cm près, feux rouge et vert, stop, sur des images de synthèse |
 | `test_room_map_calibration` | lien carte de la salle ↔ carte de la piste (localisation lidar) |
+| `test_teleop.py` | téléopération : le driver retrouve le braquage demandé, rampe, chien de garde, arrêt, marche arrière |
 | `test_demo_loop` | **les vrais nœuds ROS ensemble** autour d'un robot simulé (lidar et caméra synthétiques) : stop, obstacle, feu rouge, arrivée. Résultat : écart max 4 cm, arrêt à 0,40 m de l'obstacle. |
 
 `test/offline_sim.py` est ce simulateur hors ligne (sans Gazebo), pratique pour essayer un changement en quelques secondes.
@@ -316,3 +318,45 @@ ros2 launch be_limo real_l2.launch.py localization:=lidar map:=~/maps/salle207.y
 Démarrage et arrêt comme en section 5. Robot posé ailleurs que sur un nœud : donne sa position avec **2D Pose Estimate** dans RViz (Fixed Frame `map`). Notre programme la transmet à AMCL.
 
 Vérifier que la localisation suit bien : pousse le robot à la main de 50 cm, ou fais-le rouler, et regarde que `ros2 topic echo /robot_pose` suit son déplacement réel.
+
+---
+
+## 10. Téléopération web (robot réel)
+
+Une page web pour **voir** le robot (vue de dessus avec les roues et leur braquage, lidar, caméra, mesures) et le **piloter** à la main (vitesse, braquage). Le nœud `teleop_web` tourne **sur le robot** et sert la page ; on l'ouvre dans le navigateur du PC.
+
+Pourquoi une page web et pas RViz ou l'interface Tkinter : le PC (100.64.212.x) et le robot (100.75.155.x) sont sur deux sous-réseaux différents, et la découverte DDS de ROS 2 ne passe pas entre eux (le conteneur ne voit aucun topic du robot). Une connexion TCP, comme SSH, passe.
+
+📍 Robot (`ssh jetson@100.75.155.201`) :
+```bash
+pkill -f limo_base; pkill -f ydlidar; pkill -f astra       # un seul driver
+ros2 launch be_limo teleop.launch.py                       # driver + lidar + caméra + interface
+```
+✅ `Interface de téléopération : http://127.0.0.1:8080`.
+❌ `real_l2` tourne déjà : `ros2 launch be_limo teleop.launch.py driver:=false` (pas de caméra si `real_l2` a été lancé sans `use_camera:=true`).
+
+📍 PC, terminal **hors conteneur** (`e70348u@...`) : ouvrir le tunnel, puis le navigateur.
+```bash
+ssh -N -L 8080:localhost:8080 jetson@100.75.155.201
+```
+Laisse ce terminal ouvert, et ouvre **http://localhost:8080** dans Firefox.
+✅ Badge vert « Robot : connecté », image de la caméra, points orange du lidar autour du robot.
+❌ `bind: Address already in use` : un tunnel est déjà ouvert, ouvre directement la page.
+
+| Zone | Contenu |
+|---|---|
+| **Vue de dessus** | Robot, lidar (orange), trajectoire prévue sur 1 m (vert). Encart agrandi : angle de **chaque roue avant** (Ackermann : la roue intérieure braque plus). Bleu plein = braquage envoyé, bleu pointillé = consigne, violet pointillé = braquage déduit de l'odométrie. |
+| **Caméra** | `/rgb/image_raw`, réduite à 320 px, ~8 images/s. |
+| **Commande** | Armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier : `Z`/`S` ou ↑/↓ vitesse, `Q`/`D` ou ←/→ braquage, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
+| **Mesures** | v, ω et braquage : envoyés, sur `/cmd_vel`, vus par `/odom`, gyroscope `/limo/imu`. Un avertissement apparaît si l'odométrie ne voit pas un virage demandé. |
+
+Sécurité :
+- Rien n'est envoyé sur `/cmd_vel` tant que la commande n'est pas **armée** ; on arme toujours à vitesse 0. À l'armement, `local_controller` reçoit `pause`.
+- La page envoie la commande 10 fois par seconde. **Sans nouvelles pendant 0,5 s** (onglet fermé, réseau coupé), le robot s'arrête et se désarme. Il s'arrête aussi si l'onglet est caché ou si la fenêtre perd le focus.
+- Vitesse en rampe (0,5 m/s²), bornée par `max_speed` (0,30 m/s, `teleop.launch.py max_speed:=...`) et par le curseur « vitesse max » (0,15 par défaut).
+- Un seul onglet pilote à la fois.
+- Le serveur n'écoute que `localhost` : il faut l'accès SSH au robot. `host:=0.0.0.0` l'ouvre à tout le réseau de l'école (à éviter).
+
+Braquer à l'arrêt : en Ackermann, `limo_base` remet les roues droites quand la vitesse est nulle. L'option envoie une vitesse de 0,0002 m/s, que le driver arrondit à 0 mm/s, avec le braquage : les roues braquent sans que le robot avance. Pratique roues en l'air pour vérifier le braquage.
+
+Cinématique : la page donne (v, δ) ; le nœud envoie `ω = v·tan δ / L` avec **L = 0,20 m**, l'empattement utilisé par `limo_base`, qui retrouve ainsi exactement δ (`be_limo/teleop.py`, testé dans `test/test_teleop.py`).

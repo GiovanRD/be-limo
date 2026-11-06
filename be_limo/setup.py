@@ -15,6 +15,7 @@ setup(
         ('share/' + package_name + '/worlds', glob('worlds/*.world')),
         ('share/' + package_name + '/rviz', glob('rviz/*.rviz')),
         ('share/' + package_name + '/config', glob('config/*.yaml')),
+        ('share/' + package_name + '/web', glob('web/*.html')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -32,6 +33,7 @@ setup(
             'vision_node = be_limo.vision_node:main',
             'traffic_light_manager = be_limo.traffic_light_manager:main',
             'supervisor = be_limo.supervisor_gui:main',
+            'teleop_web = be_limo.teleop_web_node:main',
         ],
     },
 )

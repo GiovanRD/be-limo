@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIMO 201 — Téléopération</title>
+<style>
+  :root {
+    --bg: #12151a; --panel: #1b2027; --line: #2c333d; --text: #e6e9ee; --muted: #8c96a3;
+    --accent: #4aa3ff; --ok: #3ccf7a; --warn: #f2b33d; --bad: #ff5a52; --lidar: #ff9a3c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 12px 16px 24px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 12px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .pill { padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+          font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pill.ok { border-color: var(--ok); color: var(--ok); }
+  .pill.warn { border-color: var(--warn); color: var(--warn); }
+  .pill.bad { border-color: var(--bad); color: var(--bad); }
+  #estop { margin-left: auto; background: var(--bad); color: #fff; border: 0; border-radius: 10px;
+           font-size: 18px; font-weight: 700; padding: 12px 26px; cursor: pointer; letter-spacing: .5px; }
+  #estop:active { transform: scale(.97); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } #estop { margin-left: 0; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted);
+             margin: 0 0 8px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+  canvas { width: 100%; display: block; background: #0d1014; border-radius: 8px; touch-action: none; }
+  #cam { width: 100%; aspect-ratio: 4 / 3; background: #0d1014; border-radius: 8px; display: block; object-fit: contain; }
+  .controls { display: grid; gap: 12px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  label.slider { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) 6.5em; align-items: center; gap: 10px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .val { font-variant-numeric: tabular-nums; text-align: right; }
+  button.b { background: #26303b; color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+             padding: 7px 12px; cursor: pointer; font: inherit; }
+  button.b:hover { border-color: var(--accent); }
+  #arm { font-weight: 700; min-width: 11em; }
+  #arm.on { background: var(--ok); color: #062611; border-color: var(--ok); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+  th:first-child, td:first-child { text-align: left; color: var(--muted); font-weight: normal; }
+  thead th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .note { color: var(--muted); font-size: 12.5px; }
+  .warnbox { border: 1px solid var(--warn); color: var(--warn); border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  kbd { background: #26303b; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+        padding: 0 5px; font: 12px ui-monospace, monospace; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; }
+  .sw { width: 12px; height: 3px; display: inline-block; border-radius: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>LIMO 201 — Téléopération</h1>
+  <span id="link" class="pill bad">Robot : pas de réponse</span>
+  <span id="mode" class="pill">Mode châssis : ?</span>
+  <span id="batt" class="pill">Batterie : ?</span>
+  <span id="ctrl" class="pill">Contrôleur : ?</span>
+  <button id="estop" title="Espace">ARRÊT</button>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2><span>Vue de dessus — robot, roues, lidar</span>
+        <span class="row" style="gap:6px">Portée
+          <select id="zoom" class="b" style="padding:2px 6px">
+            <option value="1">1 m</option><option value="2" selected>2 m</option>
+            <option value="4">4 m</option><option value="8">8 m</option></select></span></h2>
+    <canvas id="top" width="760" height="620"></canvas>
+    <div class="legend note" style="margin-top:6px">
+      <span><i class="sw" style="background:var(--accent)"></i>roues : braquage envoyé (pointillés : consigne)</span>
+      <span><i class="sw" style="background:#c9a7ff"></i>braquage vu par l'odométrie</span>
+      <span><i class="sw" style="background:var(--ok)"></i>trajectoire prévue (1 m)</span>
+      <span><i class="sw" style="background:var(--lidar)"></i>lidar</span>
+    </div>
+  </div>
+
+  <div style="display:grid; gap:12px; min-width:0">
+    <div class="card">
+      <h2><span>Caméra</span><span id="camInfo" class="note"></span></h2>
+      <img id="cam" alt="Pas d'image caméra (use_camera:=true ?)">
+    </div>
+
+    <div class="card controls">
+      <h2><span>Commande</span><span id="reason" class="note"></span></h2>
+      <div class="row">
+        <button id="arm" class="b">Armer la commande</button>
+        <button id="zeroV" class="b">Vitesse 0</button>
+        <button id="zeroS" class="b">Braquage 0</button>
+      </div>
+      <div id="otherTab" class="warnbox" hidden>Le robot est piloté depuis un autre onglet ou un autre PC.</div>
+      <label class="slider">Vitesse
+        <input id="v" type="range" min="-0.3" max="0.3" step="0.01" value="0">
+        <span id="vVal" class="val">0,00 m/s</span></label>
+      <label class="slider">Braquage
+        <input id="s" type="range" min="-25" max="25" step="0.5" value="0" style="direction: rtl">
+        <span id="sVal" class="val">0,0°</span></label>
+      <label class="slider">Vitesse max
+        <input id="vmax" type="range" min="0.05" max="0.3" step="0.01" value="0.15">
+        <span id="vmaxVal" class="val">0,15 m/s</span></label>
+      <label class="row note"><input id="sip" type="checkbox"> Braquer à l'arrêt (montre le braquage roues en l'air, vitesse 0)</label>
+      <div class="note">
+        <kbd>Z</kbd>/<kbd>↑</kbd> <kbd>S</kbd>/<kbd>↓</kbd> vitesse ±0,02 ·
+        <kbd>Q</kbd>/<kbd>←</kbd> <kbd>D</kbd>/<kbd>→</kbd> braquage ±2° ·
+        <kbd>X</kbd> vitesse 0 · <kbd>C</kbd> braquage 0 · <kbd>Espace</kbd> ARRÊT.<br>
+        Le robot s'arrête tout seul si la page ne répond plus pendant 0,5 s, si l'onglet est caché ou si la fenêtre perd le focus.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span>Mesures</span></h2>
+      <table>
+        <thead><tr><th></th><th>v [m/s]</th><th>ω [rad/s]</th><th>braquage</th></tr></thead>
+        <tbody>
+          <tr><td>Envoyé par l'interface</td><td id="tSv"></td><td id="tSw"></td><td id="tSs"></td></tr>
+          <tr><td>Sur /cmd_vel</td><td id="tCv"></td><td id="tCw"></td><td id="tCs"></td></tr>
+          <tr><td>Odométrie /odom</td><td id="tOv"></td><td id="tOw"></td><td id="tOs"></td></tr>
+          <tr><td>Gyroscope /imu</td><td></td><td id="tIw"></td><td></td></tr>
+        </tbody>
+      </table>
+      <p class="note" id="poseTxt" style="margin:8px 0 0"></p>
+      <p class="note" id="diag" style="margin:6px 0 0"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const CLIENT = Math.random().toString(36).slice(2, 10);
+const fr = (x, n = 2) => (x == null || !isFinite(x)) ? '—' : x.toFixed(n).replace('.', ',');
+const deg = r => r * 180 / Math.PI;
+
+let S = null;            // dernier état reçu
+let armed = false;
+let lastOk = 0;
+
+// ------------------------------------------------------------------ commande
+const vEl = $('v'), sEl = $('s'), vmaxEl = $('vmax');
+function vmax() { return parseFloat(vmaxEl.value); }
+function setV(x) { vEl.value = Math.max(-vmax(), Math.min(vmax(), x)); showSliders(); }
+function setS(x) { sEl.value = Math.max(+sEl.min, Math.min(+sEl.max, x)); showSliders(); }
+function showSliders() {
+  vEl.min = -vmax(); vEl.max = vmax();
+  if (Math.abs(+vEl.value) > vmax()) vEl.value = Math.sign(+vEl.value) * vmax();
+  $('vVal').textContent = fr(+vEl.value) + ' m/s';
+  const s = +sEl.value;
+  $('sVal').textContent = fr(Math.abs(s), 1) + '° ' + (s > 0 ? 'G' : s < 0 ? 'D' : '');
+  $('vmaxVal').textContent = fr(vmax()) + ' m/s';
+}
+[vEl, sEl, vmaxEl].forEach(e => e.addEventListener('input', showSliders));
+
+async function post(path, body) {
+  const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                               body: JSON.stringify(Object.assign({client: CLIENT}, body))});
+  return [r.status, await r.json().catch(() => ({}))];
+}
+function cmdBody() {
+  return {armed, v: +vEl.value, steering: +sEl.value * Math.PI / 180, steer_in_place: $('sip').checked};
+}
+async function stop(why) {
+  armed = false; vEl.value = 0; showSliders(); refreshArm();
+  try { await post('/api/stop', {why}); } catch (e) {}
+}
+$('estop').onclick = () => stop('bouton');
+$('arm').onclick = async () => {
+  if (armed) { armed = false; refreshArm(); post('/api/cmd', {armed: false, v: 0}); return; }
+  vEl.value = 0; showSliders();                       // on arme toujours à vitesse nulle
+  armed = true; refreshArm();
+  const [code, res] = await post('/api/cmd', cmdBody()).catch(() => [0, {}]);
+  if (code !== 200) { armed = false; refreshArm(); alertMsg(res.error || 'Robot injoignable'); }
+};
+$('zeroV').onclick = () => setV(0);
+$('zeroS').onclick = () => setS(0);
+function refreshArm() {
+  $('arm').classList.toggle('on', armed);
+  $('arm').textContent = armed ? 'ARMÉ — cliquer pour désarmer' : 'Armer la commande';
+}
+function alertMsg(m) { $('reason').textContent = m; }
+
+// Battement de cœur : 10 Hz tant que la commande est armée.
+setInterval(async () => {
+  if (!armed) return;
+  try {
+    const [code, res] = await post('/api/cmd', cmdBody());
+    if (code !== 200) { armed = false; refreshArm(); alertMsg(res.error || ('erreur ' + code)); }
+  } catch (e) { /* le chien de garde du robot arrêtera */ }
+}, 100);
+
+document.addEventListener('visibilitychange', () => { if (document.hidden && armed) stop('onglet caché'); });
+window.addEventListener('blur', () => { if (armed) stop('fenêtre sans focus'); });
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT') return;
+  const k = e.key.toLowerCase();
+  const map = {
+    ' ': () => stop('espace'),
+    'z': () => setV(+vEl.value + 0.02), 'arrowup': () => setV(+vEl.value + 0.02),
+    's': () => setV(+vEl.value - 0.02), 'arrowdown': () => setV(+vEl.value - 0.02),
+    'q': () => setS(+sEl.value + 2), 'arrowleft': () => setS(+sEl.value + 2),
+    'd': () => setS(+sEl.value - 2), 'arrowright': () => setS(+sEl.value - 2),
+    'x': () => setV(0), 'c': () => setS(0),
+  };
+  if (map[k]) { e.preventDefault(); map[k](); }
+});
+
+// ------------------------------------------------------------------- état
+async function poll() {
+  try {
+    const r = await fetch('/api/state?client=' + CLIENT, {cache: 'no-store'});
+    S = await r.json(); lastOk = performance.now();
+    applyState();
+  } catch (e) {}
+  setTimeout(poll, 100);
+}
+function pill(el, text, cls) { el.textContent = text; el.className = 'pill ' + (cls || ''); }
+function applyState() {
+  const t = S.teleop;
+  sEl.min = -deg(t.max_steering); sEl.max = deg(t.max_steering);
+  vmaxEl.max = t.max_speed;
+  if (armed && !t.armed) { armed = false; refreshArm(); vEl.value = 0; showSliders(); }
+  if (!armed) alertMsg(t.reason || '');
+  else alertMsg('armé');
+  $('otherTab').hidden = !t.owner_other;
+
+  if (S.status) {
+    const m = S.status;
+    pill($('mode'), 'Mode châssis : ' + m.motion_mode + ' (' + m.motion_mode_name + ')', m.motion_mode === 1 ? 'ok' : 'warn');
+    pill($('batt'), 'Batterie : ' + fr(m.battery, 1) + ' V', m.battery < 10.5 ? 'bad' : m.battery < 11 ? 'warn' : 'ok');
+  }
+  if (S.controller) {
+    const st = S.controller.state;
+    pill($('ctrl'), 'Contrôleur : ' + st, S.controller.running ? 'warn' : '');
+  } else pill($('ctrl'), 'Contrôleur : absent', '');
+
+  const L = S.geometry.wheelbase;
+  const steerOf = (v, w) => (Math.abs(v) < 1e-6 || Math.abs(w) < 1e-9) ? 0 : Math.atan(L * w / v);
+  const sent = t.sent;
+  $('tSv').textContent = fr(sent.v, 3); $('tSw').textContent = fr(sent.omega, 3);
+  $('tSs').textContent = fr(deg(steerOf(sent.v, sent.omega)), 1) + '°';
+  if (S.cmd_vel) { const c = S.cmd_vel; $('tCv').textContent = fr(c.v, 3); $('tCw').textContent = fr(c.omega, 3);
+                   $('tCs').textContent = fr(deg(steerOf(c.v, c.omega)), 1) + '°'; }
+  if (S.odom) { const o = S.odom; $('tOv').textContent = fr(o.v, 3); $('tOw').textContent = fr(o.omega, 3);
+                $('tOs').textContent = fr(deg(o.steering), 1) + '°'; }
+  if (S.imu) $('tIw').textContent = fr(S.imu.omega, 3);
+  const p = S.pose || S.odom;
+  $('poseTxt').textContent = p ? ((S.pose ? '/robot_pose' : '/odom') + ' : x = ' + fr(p.x) + ' m, y = ' + fr(p.y) +
+                                  ' m, cap = ' + fr(deg(p.yaw), 1) + '°') : '';
+  // Diagnostic : l'odométrie voit-elle les virages ?
+  let d = '';
+  if (S.odom && S.imu && Math.abs(S.odom.v) > 0.03) {
+    const wc = S.cmd_vel ? S.cmd_vel.omega : 0;
+    if (Math.abs(wc) > 0.05 && Math.abs(S.odom.omega) < 0.01)
+      d = '⚠ Virage demandé (ω = ' + fr(wc, 2) + ') mais l\'odométrie donne ω ≈ 0 : elle ne voit pas les virages.';
+  }
+  if (S.status && S.status.motion_mode !== 1)
+    d += (d ? ' ' : '') + '⚠ Le châssis annonce le mode ' + S.status.motion_mode_name +
+         ' : l\'odométrie du driver est calculée dans ce mode.';
+  $('diag').textContent = d;
+  $('camInfo').textContent = S.camera ? (S.camera.width + '×' + S.camera.height + ', ' +
+                             (S.camera_age < 1 ? 'en direct' : 'figée ' + fr(S.camera_age, 0) + ' s')) : 'pas de caméra';
+}
+setInterval(() => {
+  const age = (performance.now() - lastOk) / 1000;
+  if (!lastOk || age > 1.5) pill($('link'), 'Robot : pas de réponse', 'bad');
+  else pill($('link'), 'Robot : connecté', 'ok');
+}, 300);
+
+// --------------------------------------------------------------- dessin
+const cv = $('top'), g = cv.getContext('2d');
+function resizeCanvas() {
+  const w = cv.clientWidth, dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(w * 0.8 * dpr);
+}
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+function draw() {
+  const W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+  const range = +$('zoom').value;
+  const scale = Math.min(W, H) / 2 / range;          // px par mètre
+  const cx = W / 2, cy = H * 0.58;
+  // repère robot (x devant, y à gauche) -> écran (vers le haut, vers la gauche)
+  const P = (x, y) => [cx - y * scale, cy - x * scale];
+  g.clearRect(0, 0, W, H);
+
+  // grille
+  g.lineWidth = 1 * dpr; g.strokeStyle = '#1f262f'; g.fillStyle = '#56606c';
+  g.font = (11 * dpr) + 'px system-ui';
+  const stepM = range <= 1 ? 0.25 : range <= 2 ? 0.5 : 1;
+  for (let r = stepM; r <= range * 1.6; r += stepM) {
+    g.beginPath(); g.arc(cx, cy, r * scale, 0, 2 * Math.PI); g.stroke();
+    g.fillText(fr(r, r < 1 ? 2 : 1).replace(/,?0+$/, '') + ' m', cx + 4 * dpr, cy - r * scale - 3 * dpr);
+  }
+  g.beginPath(); g.moveTo(cx, 0); g.lineTo(cx, H); g.moveTo(0, cy); g.lineTo(W, cy); g.stroke();
+  if (!S) return;
+
+  const geo = S.geometry, L = geo.wheelbase, T = geo.track;
+  const t = S.teleop;
+  const steerOf = (v, w) => (Math.abs(v) < 1e-6 || Math.abs(w) < 1e-9) ? 0 : Math.atan(L * w / v);
+  // Roues pleines : braquage réellement envoyé au driver (à vitesse nulle le
+  // driver remet les roues droites, sauf « braquer à l'arrêt »).
+  // Pointillés : consigne du curseur, quand elle diffère.
+  const sentDelta = steerOf(t.sent.v, t.sent.omega);
+  const delta = t.steering;
+  const dirV = t.target_v < 0 ? -1 : 1;
+
+  // lidar
+  if (S.scan) {
+    const sc = S.scan; g.fillStyle = '#ff9a3c';
+    const ps = 2.2 * dpr;
+    for (let i = 0; i < sc.ranges.length; i++) {
+      const r = sc.ranges[i]; if (!r) continue;
+      const a = sc.angle_min + i * sc.angle_increment + geo.laser_yaw;
+      const [u, v] = P(geo.laser_x + r * Math.cos(a), r * Math.sin(a));
+      g.fillRect(u - ps / 2, v - ps / 2, ps, ps);
+    }
+  }
+
+  // trajectoire prévue : cercle autour du centre instantané (sur l'essieu arrière, x = -L/2)
+  g.strokeStyle = '#3ccf7a'; g.lineWidth = 2.5 * dpr; g.setLineDash([]);
+  g.beginPath();
+  const len = 1.0, xr = -L / 2;
+  for (let k = 0; k <= 40; k++) {
+    const s = dirV * len * k / 40;
+    let x, y;
+    if (Math.abs(delta) < 1e-4) { x = xr + s; y = 0; }
+    else { const R = L / Math.tan(delta), th = s / R; x = xr + R * Math.sin(th); y = R * (1 - Math.cos(th)); }
+    const [u, v] = P(x, y); k ? g.lineTo(u, v) : g.moveTo(u, v);
+  }
+  g.stroke();
+
+  drawRobot(P, scale, false);
+
+  // Encart : le robot en grand, avec l'angle de chaque roue avant.
+  const box = Math.round(Math.min(W, H) * 0.36), pad = 10 * dpr;
+  g.fillStyle = 'rgba(13,16,20,0.92)'; g.strokeStyle = '#2c333d'; g.lineWidth = 1 * dpr;
+  g.beginPath(); g.rect(pad, pad, box, box * 1.15); g.fill(); g.stroke();
+  const iscale = box / 0.42, icx = pad + box / 2, icy = pad + box * 1.15 * 0.56;
+  const IP = (x, y) => [icx - y * iscale, icy - x * iscale];
+  g.save(); g.beginPath(); g.rect(pad, pad, box, box * 1.15); g.clip();
+  drawRobot(IP, iscale, true);
+  g.restore();
+  g.fillStyle = '#8c96a3'; g.font = (11 * dpr) + 'px system-ui'; g.textAlign = 'left';
+  g.fillText('Roues (vue agrandie)', pad + 6 * dpr, pad + 14 * dpr);
+
+  function drawRobot(P, scale, labels) {
+    // caisse (LIMO : 0,322 × 0,220 m), base_link au centre
+    const bodyL = 0.322, bodyW = 0.22;
+    g.fillStyle = 'rgba(74,163,255,0.10)'; g.strokeStyle = '#4aa3ff'; g.lineWidth = 2 * dpr;
+    const [bx, by] = P(bodyL / 2, bodyW / 2);
+    g.beginPath();
+    if (g.roundRect) g.roundRect(bx, by, bodyW * scale, bodyL * scale, 6 * dpr); else g.rect(bx, by, bodyW * scale, bodyL * scale);
+    g.fill(); g.stroke();
+    // lidar sur la caisse, flèche avant
+    const [lx, ly] = P(geo.laser_x, 0);
+    g.fillStyle = '#ff9a3c'; g.beginPath(); g.arc(lx, ly, 0.025 * scale, 0, 2 * Math.PI); g.fill();
+    const [ax, ay] = P(bodyL / 2 + 0.04, 0), [a1x, a1y] = P(bodyL / 2 - 0.01, 0.035), [a2x, a2y] = P(bodyL / 2 - 0.01, -0.035);
+    g.fillStyle = '#4aa3ff'; g.beginPath(); g.moveTo(ax, ay); g.lineTo(a1x, a1y); g.lineTo(a2x, a2y); g.fill();
+
+    function wheel(x, y, angle, color, dashed) {
+      const wl = 0.09, ww = 0.045;
+      const [u, v] = P(x, y);
+      g.save(); g.translate(u, v); g.rotate(-angle);
+      g.strokeStyle = color; g.lineWidth = 2 * dpr; g.setLineDash(dashed ? [4 * dpr, 3 * dpr] : []);
+      g.fillStyle = color + '55';
+      g.beginPath(); g.rect(-ww / 2 * scale, -wl / 2 * scale, ww * scale, wl * scale);
+      if (!dashed) g.fill();
+      g.stroke();
+      if (labels && !dashed) {          // axe de la roue : montre l'angle
+        g.beginPath(); g.moveTo(0, -wl * 0.9 * scale); g.lineTo(0, wl * 0.9 * scale); g.stroke();
+      }
+      g.restore(); g.setLineDash([]);
+    }
+    const xf = L / 2;
+    wheel(-L / 2, T / 2, 0, '#8c96a3'); wheel(-L / 2, -T / 2, 0, '#8c96a3');
+    const [wl, wr] = ackermann(sentDelta);
+    wheel(xf, T / 2, wl, '#4aa3ff', false); wheel(xf, -T / 2, wr, '#4aa3ff', false);
+    if (Math.abs(delta - sentDelta) > 0.005) {
+      const [cl, cr] = ackermann(delta);
+      wheel(xf, T / 2, cl, '#4aa3ff', true); wheel(xf, -T / 2, cr, '#4aa3ff', true);
+    }
+    if (S.odom && Math.abs(S.odom.v) > 0.02) {
+      const [ol, or] = ackermann(S.odom.steering);
+      wheel(xf, T / 2, ol, '#c9a7ff', true); wheel(xf, -T / 2, or, '#c9a7ff', true);
+    }
+    if (labels) {
+      g.fillStyle = '#e6e9ee'; g.font = (13 * dpr) + 'px system-ui';
+      const [tl, tlv] = P(xf, T / 2 + 0.045), [trx, trv] = P(xf, -T / 2 - 0.045);
+      g.textAlign = 'right'; g.fillText(fr(deg(wl), 1) + '°', tl, tlv + 4 * dpr);
+      g.textAlign = 'left'; g.fillText(fr(deg(wr), 1) + '°', trx, trv + 4 * dpr);
+      g.fillStyle = '#8c96a3'; g.font = (11 * dpr) + 'px system-ui'; g.textAlign = 'center';
+      const [mx, my] = P(-bodyL / 2 - 0.03, 0);
+      g.fillText('consigne ' + fr(deg(delta), 1) + '° · envoyé ' + fr(deg(sentDelta), 1) + '°', mx, my);
+      g.textAlign = 'left';
+    }
+  }
+  function ackermann(d) {
+    if (Math.abs(d) < 1e-6) return [0, 0];
+    const R = L / Math.tan(d);
+    return [Math.atan(L / (R - T / 2)), Math.atan(L / (R + T / 2))];
+  }
+}
+(function loop() { draw(); requestAnimationFrame(loop); })();
+
+// caméra : on (re)connecte le flux MJPEG s'il coupe
+function connectCam() { $('cam').src = '/api/camera.mjpg?' + Date.now(); }
+$('cam').onerror = () => setTimeout(connectCam, 2000);
+connectCam();
+showSliders(); refreshArm(); poll();
+</script>
+</body>
+</html>
