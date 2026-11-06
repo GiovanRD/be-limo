@@ -347,13 +347,13 @@ Laisse ce terminal ouvert, et ouvre **http://localhost:8080** dans Firefox.
 |---|---|
 | **Vue de dessus** | Robot, lidar (orange), trajectoire prévue sur 1 m (vert). Encart agrandi : angle de **chaque roue avant** (Ackermann : la roue intérieure braque plus). Bleu plein = braquage envoyé, bleu pointillé = consigne, violet pointillé = braquage déduit de l'odométrie. |
 | **Caméra** | `/rgb/image_raw`, réduite à 320 px, ~8 images/s. |
-| **Commande** | Armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier, mode **Maintenir** (défaut) : tenir `Z`/↑ avance à la vitesse max, `S`/↓ recule, lâcher = freinage ; tenir `Q`/← ou `D`/→ braque, lâcher = roues droites. Mode **Pas à pas** : chaque appui change la consigne (±0,02 m/s, ±2°). `Entrée` armer/désarmer, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
+| **Commande** | Armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier, mode **Maintenir** (défaut) : tenir `Z`/↑ avance à la vitesse max, `S`/↓ recule, **lâcher = arrêt immédiat** ; tenir `Q`/← ou `D`/→ braque, lâcher = roues droites. Mode **Pas à pas** : chaque appui change la consigne (±0,02 m/s, ±2°). `Entrée` armer/désarmer, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
 | **Mesures** | v, ω et braquage : envoyés, sur `/cmd_vel`, vus par `/odom`, gyroscope `/limo/imu`. Un avertissement apparaît si l'odométrie ne voit pas un virage demandé. |
 
 Sécurité :
 - Rien n'est envoyé sur `/cmd_vel` tant que la commande n'est pas **armée** ; on arme toujours à vitesse 0. À l'armement, `local_controller` reçoit `pause`.
 - La page envoie la commande 10 fois par seconde. **Sans nouvelles pendant 0,5 s** (onglet fermé, réseau coupé), le robot s'arrête et se désarme. Il s'arrête aussi si l'onglet est caché ou si la fenêtre perd le focus.
-- Vitesse en rampe (0,5 m/s²), bornée par `max_speed` (0,30 m/s, `teleop.launch.py max_speed:=...`) et par le curseur « vitesse max » (0,15 par défaut).
+- Accélération en rampe (0,5 m/s²), ralentissement et arrêt immédiats, bornée par `max_speed` (0,30 m/s, `teleop.launch.py max_speed:=...`) et par le curseur « vitesse max » (0,15 par défaut).
 - Un seul onglet pilote à la fois.
 - Le serveur n'écoute que `localhost` : il faut l'accès SSH au robot. `host:=0.0.0.0` l'ouvre à tout le réseau de l'école (à éviter).
 

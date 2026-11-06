@@ -118,7 +118,7 @@
       </div>
       <div class="note">
         <b>Maintenir</b> : tiens <kbd>Z</kbd>/<kbd>↑</kbd> pour avancer à la vitesse max, <kbd>S</kbd>/<kbd>↓</kbd> pour reculer ;
-        lâche = freinage. Tiens <kbd>Q</kbd>/<kbd>←</kbd> ou <kbd>D</kbd>/<kbd>→</kbd> pour braquer ; lâche = roues droites.<br>
+        <b>lâche = arrêt immédiat</b>. Tiens <kbd>Q</kbd>/<kbd>←</kbd> ou <kbd>D</kbd>/<kbd>→</kbd> pour braquer ; lâche = roues droites.<br>
         <b>Pas à pas</b> : chaque appui change la vitesse de 0,02 m/s ou le braquage de 2°.<br>
         <kbd>Entrée</kbd> armer/désarmer · <kbd>X</kbd> vitesse 0 · <kbd>C</kbd> braquage 0 · <kbd>Espace</kbd> ARRÊT.<br>
         Le robot s'arrête tout seul si la page ne répond plus pendant 0,5 s, si l'onglet est caché ou si la fenêtre perd le focus.
@@ -238,7 +238,14 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => {
   const dir = DIRS[e.key.toLowerCase()];
-  if (dir) held.delete(dir);
+  if (!dir) return;
+  held.delete(dir);
+  // Touche avancer/reculer lâchée : arrêt envoyé tout de suite, sans attendre
+  // le prochain battement de cœur.
+  if (holdMode() && (dir === 'up' || dir === 'down') && !held.has('up') && !held.has('down')) {
+    setV(0);
+    if (armed) post('/api/cmd', cmdBody()).catch(() => {});
+  }
 });
 window.addEventListener('blur', () => held.clear());
 

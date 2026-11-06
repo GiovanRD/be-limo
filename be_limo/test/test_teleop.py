@@ -97,6 +97,26 @@ def test_zero_speed_straightens_wheels_unless_steer_in_place():
     assert v == STEER_IN_PLACE_V and abs(driver_steering(v, w) - 0.3) < 1e-9
 
 
+def test_releasing_the_key_stops_at_once():
+    s = TeleopState(accel=0.5)
+    s.command(0.0, armed=True, v=0.15)
+    (v, _), now = run_for(None, s, 0.0, 1.0)
+    assert abs(v - 0.15) < 1e-9
+    s.command(now, v=0.0)                     # touche lâchée
+    assert s.step(now + 0.02) == (0.0, 0.0)
+    # ralentir aussi est immédiat
+    s.command(now + 0.03, v=0.15)
+    run_for(None, s, now + 0.03, 1.0)
+    s.command(now + 1.1, v=0.05)
+    v, _ = s.step(now + 1.12)
+    assert abs(v - 0.05) < 1e-9
+    # changement de sens : arrêt d'abord, puis rampe
+    s.command(now + 1.13, v=-0.15)
+    assert s.step(now + 1.15) == (0.0, 0.0)
+    v, _ = s.step(now + 1.25)
+    assert -0.06 < v < 0
+
+
 def test_reverse_keeps_the_same_steering():
     s = TeleopState(accel=10.0)
     s.command(0.0, armed=True, v=-0.1, steering=0.2)

@@ -13,7 +13,8 @@ Sécurité, dans TeleopState :
 * rien n'est envoyé tant que l'interface n'est pas « armée » ;
 * l'interface doit envoyer une commande au moins toutes les `timeout` s
   (chien de garde) : onglet fermé, réseau coupé, PC planté -> arrêt ;
-* vitesse et braquage bornés, vitesse en rampe (pas d'à-coups) ;
+* vitesse et braquage bornés ; accélération en rampe (pas d'à-coups),
+  ralentissement et arrêt immédiats ;
 * désarmé : quelques commandes nulles, puis plus rien, pour ne pas gêner
   local_controller s'il tourne.
 """
@@ -118,10 +119,16 @@ class TeleopState:
                 self.zeros_left -= 1
                 return 0.0, 0.0
             return None
-        # Rampe de vitesse ; on freine toujours vers 0 avant de changer de sens.
-        dv = self.target_v - self.v
-        max_dv = self.accel * dt
-        self.v += clamp(dv, -max_dv, max_dv)
+        # Ralentir ou s'arrêter : immédiat (touche lâchée = arrêt).
+        # Accélérer : en rampe, pour éviter les à-coups. Changement de sens :
+        # arrêt, puis rampe dans l'autre sens.
+        if self.target_v * self.v < 0:
+            self.v = 0.0
+        elif abs(self.target_v) <= abs(self.v):
+            self.v = self.target_v
+        else:
+            max_dv = self.accel * dt
+            self.v += clamp(self.target_v - self.v, -max_dv, max_dv)
         if abs(self.v) < 1e-4 and abs(self.target_v) < 1e-4:
             self.v = 0.0
         if abs(self.v) < 1e-6:
