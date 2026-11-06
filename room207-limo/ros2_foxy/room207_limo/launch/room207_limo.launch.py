@@ -2,11 +2,20 @@ import os
 
 import xacro
 
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import (
+    get_package_prefix,
+    get_package_share_directory,
+)
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    SetEnvironmentVariable,
+    TimerAction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -21,8 +30,8 @@ def generate_launch_description():
         'room207_limo'
     )
 
-    qcar_large_track_pkg = get_package_share_directory(
-        'qcar_large_track'
+    ensem_room207_pkg = get_package_share_directory(
+        'ensem_room207'
     )
 
     limo_car_pkg = get_package_share_directory(
@@ -37,10 +46,24 @@ def generate_launch_description():
     # World
     # ============================================================
 
-    world_file = os.path.join(
-        qcar_large_track_pkg,
-        'worlds',
-        'qcar_large_track.world'
+    # Room 207 by default; the bare track world can be selected with
+    # world:=$(ros2 pkg prefix qcar_large_track)/share/qcar_large_track/worlds/qcar_large_track.world
+    world = DeclareLaunchArgument(
+        'world',
+        default_value=os.path.join(
+            ensem_room207_pkg,
+            'worlds',
+            'ensem_room207.world'
+        ),
+        description='Gazebo world file.',
+    )
+
+    # The Room 207 track is on a 20 cm platform; use spawn_z:=0.15 with
+    # the qcar_large_track world (track on the ground).
+    spawn_z = DeclareLaunchArgument(
+        'spawn_z',
+        default_value='0.35',
+        description='Spawn height of the LIMO in metres.',
     )
 
     # ============================================================
@@ -74,6 +97,16 @@ def generate_launch_description():
     # Gazebo
     # ============================================================
 
+    # The Room 207 world loads a GUI plugin from ensem_room207 (hides the
+    # green light markers); make sure gzclient finds it.
+    plugin_path = SetEnvironmentVariable(
+        'GAZEBO_PLUGIN_PATH',
+        os.pathsep.join([
+            os.path.join(get_package_prefix('ensem_room207'), 'lib'),
+            os.environ.get('GAZEBO_PLUGIN_PATH', ''),
+        ]),
+    )
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -83,7 +116,7 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            'world': world_file,
+            'world': LaunchConfiguration('world'),
         }.items(),
     )
 
@@ -103,7 +136,7 @@ def generate_launch_description():
                     '-entity', 'limo',
                     '-x', '-0.725347',
                     '-y', '-0.086613',
-                    '-z', '0.15',
+                    '-z', LaunchConfiguration('spawn_z'),
                     '-Y', '1.5708',
                 ],
                 output='screen',
@@ -133,6 +166,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        world,
+        spawn_z,
+        plugin_path,
         gazebo,
         robot_state_publisher,
         spawn_limo,

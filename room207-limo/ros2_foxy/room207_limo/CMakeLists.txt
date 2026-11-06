@@ -12,10 +12,9 @@ install(
 )
 
 install(
-  PROGRAMS
-    room207_limo/recording_simulation.py
+  PROGRAMS room207_limo/room207_simu_gui.py
   DESTINATION lib/${PROJECT_NAME}
-  RENAME recording_simulation
+  RENAME room207_simu_gui
 )
 
 install(

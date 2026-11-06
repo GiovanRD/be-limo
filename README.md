@@ -287,9 +287,17 @@ Pour tester sans le robot. Tout se passe sur le **PC**.
 ```bash
 ros2 launch room207_limo room207_limo.launch.py
 ```
-✅ Gazebo s'ouvre avec la piste et la LIMO ; RViz s'ouvre aussi (le premier lancement peut prendre 1 minute)
+✅ Gazebo s'ouvre avec **la salle 207** (murs, plateforme de 20 cm, feux) et la LIMO sur la piste ; RViz s'ouvre aussi (le premier lancement peut prendre 1 minute)
 ❌ Fenêtre noire ou Gazebo plante sous WSL : vérifie `wsl --version` dans PowerShell (WSLg doit apparaître).
 ❌ `Package 'room207_limo' not found` : retour à l'étape 1.2.
+
+Depuis la mise à jour du labo (novembre 2026), le monde par défaut est la salle 207 complète. La piste seule, au sol :
+```bash
+ros2 launch room207_limo room207_limo.launch.py \
+  world:=$(ros2 pkg prefix qcar_large_track)/share/qcar_large_track/worlds/qcar_large_track.world spawn_z:=0.15
+```
+Démonstration complète du labo (simulation + enregistreur + fenêtre de pilotage) : `ros2 launch room207_limo demo_simu.launch.py`.
+Raccourcis du labo (`r207_sim`, `r207_demo`, `r207_robot 201`...) : `source ~/ros2_ws/src/be-limo/room207-limo/ros2_foxy/room207.bash` puis `r207_help`.
 
 📍 PC, terminal n°2
 ⌨️
@@ -468,10 +476,10 @@ Repérés dans les sources fournies par le labo :
 
 | # | Problème | Solution |
 |---|---|---|
-| 1 | `ros2 launch room207_limo demo.launch.py` plante : il appelle `teleop_limo`, qui n'existe pas | Dans `room207-limo/launch/demo.launch.py`, remplacer `teleop_limo` par `teleop_limo_simu` |
+| 1 | ~~`demo.launch.py` appelle `teleop_limo`, qui n'existe pas~~ | Corrigé par le labo (nov. 2026) : remplacé par `demo_simu.launch.py` |
 | 2 | En simu salle 207, Gazebo écoute **`/cmd_vel_gazebo`** (pas `/cmd_vel`) et y attend un **angle de braquage** (pas ω) | Téléop : ajouter `--ros-args -r /cmd_vel:=/cmd_vel_gazebo` (étape 6). Votre contrôleur (qui publie ω sur `/cmd_vel`) : lancer en plus l'adaptateur `ros2 run limo_car gazebo_twist_adapter.py`, qui convertit `/cmd_vel` → `/cmd_vel_gazebo`. Ne pas lancer la téléop et l'adaptateur en même temps. |
 | 3 | `robot_communication` absent | Le récupérer sur le GitLab Robotic lab |
-| 4 | Le monde chargé est `qcar_large_track`, pas `ensem_room207` comme annoncé | Changer le monde dans `room207_limo.launch.py` si besoin |
+| 4 | ~~Le monde chargé était `qcar_large_track`~~ | Corrigé par le labo (nov. 2026) : salle 207 par défaut, argument `world:=` pour changer |
 | 5 | IMU : nom différent | `/limo/imu` sur le robot, `/imu_plugin/out` en simu |
 | 6 | En simu, `/odom` est parfait | Le vrai robot dérivera : prévoir de la marge |
 | 7 | `sudo apt upgrade` sur le robot | **Ne pas le faire** : casse les pilotes NVIDIA |
