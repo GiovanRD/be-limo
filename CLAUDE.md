@@ -78,3 +78,26 @@ demander confirmation à l'utilisateur et vérifier que la piste est dégagée. 
   Mode route testé dans Gazebo (voie suivie à ~5 cm, arrêt à 0,35 m de l'obstacle). Mode suivi testé hors ligne seulement.
   À faire au sol : vérifier la détection de voie (robot désarmé sur la piste, calibrer camera_height/pitch), puis essais à 0,10 m/s.
 - Localisation lidar (AMCL) : écrite, pas encore essayée (carte de la salle à faire).
+
+## Prochaine séance : se repérer sur la carte (choix fait le 06/11/2026)
+
+Méthode retenue : **AMCL (lidar) sur une carte de la salle + odométrie corrigée `odom_imu`**, la caméra en complément.
+- Le lidar (~15 cm du sol) ne voit pas les lignes du tapis mais voit murs, pieds de tables, meubles : AMCL recale la
+  position en continu, sans dérive, départ depuis n'importe quel nœud. Code déjà écrit (README section 9).
+- L'odométrie seule dérive et impose un départ sur un nœud ; la caméra seule ne donne que la position dans la voie.
+- AMCL a besoin d'une odométrie juste entre deux scans : d'où `odom_imu` (le cap du driver ne tourne jamais).
+
+| Rôle | Source |
+|---|---|
+| Mouvement court terme | `odom_imu` (roues + gyroscope) |
+| Position absolue | AMCL (lidar + carte de la salle) |
+| Précision dans la voie | caméra (`use_lane_correction`, mode route) |
+
+Étapes, dans l'ordre (le robot roule : confirmation et piste dégagée, ≤ 0,15 m/s) :
+1. Vérifier `odom_imu` en roulant : un tour en manuel à 0,10 m/s avec le pilote web, le cap de `/odom_imu` doit revenir
+   à ~0° ; sinon régler `gyro_scale` (paramètre de `odom_imu`).
+2. Faire la carte de la salle (README 9.1) : `mapping.launch.py start_node:=2`, piloter lentement avec le pilote web
+   (`teleop.launch.py driver:=false localization:=none vision:=false`), salle dans son état habituel, puis `map_saver_cli`.
+3. Lancer avec `localization:=lidar map:=~/maps/salle207.yaml initial_node:=<n>` et vérifier sur la carte de la page
+   que la position suit le robot (le pousser, le faire rouler).
+Risque : salle qui change (personnes, chaises, sacs). Plan B si AMCL décroche : marqueurs ArUco vus par la caméra.
