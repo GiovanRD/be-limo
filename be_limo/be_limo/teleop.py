@@ -16,7 +16,13 @@ Sécurité, dans TeleopState :
 * vitesse et braquage bornés ; accélération en rampe (pas d'à-coups),
   ralentissement et arrêt immédiats ;
 * désarmé : quelques commandes nulles, puis plus rien, pour ne pas gêner
-  local_controller s'il tourne.
+  local_controller s'il tourne ;
+* `guard` (safety.ObstacleGuard) peut réduire ou annuler la vitesse devant
+  un obstacle, dans tous les modes.
+
+Modes : "manual" (la page donne v et le braquage), "route" et "follow" (le
+noeud calcule v et le braquage avec set_auto ; la vitesse de la page sert de
+vitesse de croisière). Changer de mode désarme.
 """
 
 import math
@@ -29,6 +35,8 @@ TRACK = 0.172         # m, voie (distance gauche-droite des roues)
 # l'arrondit à 0 mm/s dans la trame série (int16 en mm/s), mais qui garde le
 # braquage.
 STEER_IN_PLACE_V = 2e-4
+
+MODES = ('manual', 'route', 'follow')
 
 
 def omega_from_steering(v, delta, wheelbase=WHEELBASE):
@@ -76,23 +84,44 @@ class TeleopState:
         self.last_step_time = None
         self.zeros_left = 0
         self.reason = 'désarmé'
+        self.mode = 'manual'
+        self.cruise = 0.0                    # modes auto : vitesse de croisière
+        self.allowed_v = 0.0                 # après la sécurité obstacles
 
     # ------------------------------------------------------------ entrées
-    def command(self, now, v=None, steering=None, armed=None, steer_in_place=None):
+    def command(self, now, v=None, steering=None, armed=None, steer_in_place=None, mode=None):
         """Commande reçue de l'interface (sert aussi de battement de cœur)."""
+        if mode is not None and mode != self.mode:
+            if mode not in MODES:
+                raise ValueError('mode inconnu : %s' % mode)
+            if self.armed:
+                self.disarm('mode changé : réarmer')
+            self.mode = mode
+            self.target_v, self.delta = 0.0, 0.0
+            self.last_cmd_time = now
+            return
         if armed is not None:
             if armed and not self.armed:
                 self.reason = 'armé'
             if not armed and self.armed:
                 self.disarm('désarmé par l\'interface')
             self.armed = bool(armed)
+        auto = self.mode != 'manual'
         if v is not None:
-            self.target_v = clamp(float(v), -self.max_speed, self.max_speed)
-        if steering is not None:
+            if auto:
+                self.cruise = clamp(abs(float(v)), 0.0, self.max_speed)
+            else:
+                self.target_v = clamp(float(v), -self.max_speed, self.max_speed)
+        if steering is not None and not auto:
             self.delta = clamp(float(steering), -self.max_steering, self.max_steering)
         if steer_in_place is not None:
             self.steer_in_place = bool(steer_in_place)
         self.last_cmd_time = now
+
+    def set_auto(self, v, delta):
+        """Consigne calculée par le mode route ou suivi."""
+        self.target_v = clamp(v, -self.max_speed, self.max_speed)
+        self.delta = clamp(delta, -self.max_steering, self.max_steering)
 
     def stop(self, reason='arrêt'):
         """Arrêt immédiat (bouton ARRÊT, touche espace)."""
@@ -108,8 +137,11 @@ class TeleopState:
         self.reason = reason
 
     # ------------------------------------------------------------- sortie
-    def step(self, now):
-        """(v, omega) à publier sur /cmd_vel, ou None pour ne rien publier."""
+    def step(self, now, guard=None):
+        """(v, omega) à publier sur /cmd_vel, ou None pour ne rien publier.
+
+        guard(v, delta) -> vitesse autorisée (sécurité obstacles), optionnel.
+        """
         dt = 0.0 if self.last_step_time is None else max(0.0, now - self.last_step_time)
         self.last_step_time = now
         if self.armed and (self.last_cmd_time is None or now - self.last_cmd_time > self.timeout):
@@ -119,17 +151,19 @@ class TeleopState:
                 self.zeros_left -= 1
                 return 0.0, 0.0
             return None
+        target = self.target_v if guard is None else guard(self.target_v, self.delta)
+        self.allowed_v = target
         # Ralentir ou s'arrêter : immédiat (touche lâchée = arrêt).
         # Accélérer : en rampe, pour éviter les à-coups. Changement de sens :
         # arrêt, puis rampe dans l'autre sens.
-        if self.target_v * self.v < 0:
+        if target * self.v < 0:
             self.v = 0.0
-        elif abs(self.target_v) <= abs(self.v):
-            self.v = self.target_v
+        elif abs(target) <= abs(self.v):
+            self.v = target
         else:
             max_dv = self.accel * dt
-            self.v += clamp(self.target_v - self.v, -max_dv, max_dv)
-        if abs(self.v) < 1e-4 and abs(self.target_v) < 1e-4:
+            self.v += clamp(target - self.v, -max_dv, max_dv)
+        if abs(self.v) < 1e-4 and abs(target) < 1e-4:
             self.v = 0.0
         if abs(self.v) < 1e-6:
             if self.steer_in_place and abs(self.delta) > 1e-3:
@@ -144,4 +178,5 @@ class TeleopState:
         return {'armed': self.armed, 'target_v': round(self.target_v, 3), 'v': round(self.v, 3),
                 'steering': round(self.delta, 4), 'steer_in_place': self.steer_in_place,
                 'max_speed': self.max_speed, 'max_steering': round(self.max_steering, 4),
-                'reason': self.reason, 'cmd_age': age}
+                'reason': self.reason, 'cmd_age': age, 'mode': self.mode,
+                'cruise': round(self.cruise, 3), 'allowed_v': round(self.allowed_v, 3)}

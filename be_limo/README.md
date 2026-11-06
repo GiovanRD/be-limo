@@ -46,7 +46,8 @@ SIMULATION     traffic_light_manager (allume les feux dans Gazebo)
 | `vision_node` | Voie, feux, panneaux stop (caméra) | `be_limo/vision_node.py`, `be_limo/lane_vision.py`, `be_limo/sign_vision.py` |
 | `traffic_light_manager` | Feux du carrefour dans Gazebo (simulation seulement) | `be_limo/traffic_light_manager.py` |
 | `supervisor` | Interface de supervision (livrable 3) | `be_limo/supervisor_gui.py` |
-| `teleop_web` | Téléopération web sur le vrai robot (section 10) | `be_limo/teleop_web_node.py`, `be_limo/teleop.py`, `web/teleop.html` |
+| `teleop_web` | Pilote web sur le vrai robot : manuel, route, suivi, arrêt obstacles (section 10) | `be_limo/teleop_web_node.py`, `be_limo/teleop.py`, `be_limo/lane_follow.py`, `be_limo/person_follow.py`, `be_limo/safety.py`, `web/teleop.html` |
+| `odom_imu` | Odométrie corrigée par le gyroscope (section 10.3) | `be_limo/odom_imu_node.py`, `be_limo/odom_imu.py` |
 
 Tous les réglages sont dans **`config/be_limo.yaml`**.
 
@@ -226,7 +227,7 @@ Les algorithmes et les nœuds sont testés sur n'importe quel PC (Python 3, nump
 cd ~/ros2_ws/src/be-limo/be_limo
 python3 -m pytest -q test/
 ```
-✅ `17 passed`.
+✅ `31 passed`.
 
 | Test | Ce qui est vérifié |
 |---|---|
@@ -236,6 +237,7 @@ python3 -m pytest -q test/
 | `test_corridor_geometry`, `test_obstacle_in_front_and_beside` | couloir du lidar, en ligne droite et en virage |
 | `test_lane_offset_and_signs` | décalage de voie à ±1,5 cm près, feux rouge et vert, stop, sur des images de synthèse |
 | `test_room_map_calibration` | lien carte de la salle ↔ carte de la piste (localisation lidar) |
+| `test_autonomy.py` | modes route et suivi (voie rejointe, personne qui marche suivie à ~0,7 m, personne perdue = arrêt, jambes vs murs), arrêt obstacles (devant, derrière, hystérésis), odométrie gyroscope |
 | `test_teleop.py` | téléopération : le driver retrouve le braquage demandé, rampe, chien de garde, arrêt, marche arrière |
 | `test_demo_loop` | **les vrais nœuds ROS ensemble** autour d'un robot simulé (lidar et caméra synthétiques) : stop, obstacle, feu rouge, arrivée. Résultat : écart max 4 cm, arrêt à 0,40 m de l'obstacle. |
 
@@ -288,11 +290,13 @@ ros2 launch be_limo mapping.launch.py start_node:=2 map:=~/maps/salle207.yaml
 ```
 ✅ `Calibration enregistrée : /home/jetson/maps/salle207_track.yaml`, puis `Localisé par le lidar`.
 
-📍 Robot, terminal 2 : pilote **lentement** sur toute la piste, en passant partout au moins une fois et en revenant à la fin près du départ (ça aide la carte à se refermer correctement).
+📍 Robot, terminal 2 : le pilote web, sans second driver ni localisation (section 10).
 ```bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
+ros2 launch be_limo teleop.launch.py driver:=false localization:=none vision:=false
 ```
-Touche `x` plusieurs fois pour réduire la vitesse vers 0,15 m/s ; `i` avancer, `j`/`l` tourner, `k` stop.
+📍 PC : tunnel SSH et http://localhost:8080 (section 10), mode **Manuel**. Pilote **lentement** (0,10 à 0,15 m/s) sur toute la piste, en passant partout au moins une fois et en revenant à la fin près du départ (ça aide la carte à se refermer correctement).
+
+La cartographie utilise l'odométrie corrigée par le gyroscope (`odom_imu`, section 10.3), lancée avec le driver par `mapping.launch.py`.
 
 Pour voir la carte se construire : sur le PC, dans le conteneur, lance `rviz2`, mets **Fixed Frame** sur `room_map` et ajoute un affichage **Map** sur `/map`.
 
@@ -321,18 +325,31 @@ Vérifier que la localisation suit bien : pousse le robot à la main de 50 cm, o
 
 ---
 
-## 10. Téléopération web (robot réel)
+## 10. Pilote web : manuel, route, suivi (robot réel)
 
-Une page web pour **voir** le robot (vue de dessus avec les roues et leur braquage, lidar, caméra, mesures) et le **piloter** à la main (vitesse, braquage). Le nœud `teleop_web` tourne **sur le robot** et sert la page ; on l'ouvre dans le navigateur du PC.
+Une page web pour **voir** le robot (vue de dessus avec les roues et leur braquage, lidar, caméra, carte de la piste, mesures) et le **piloter** dans trois modes :
+
+| Mode | Ce que fait le robot |
+|---|---|
+| **Manuel** | Vitesse et braquage au clavier ou aux curseurs. |
+| **Route (caméra)** | Suit la voie vue par la caméra (ligne jaune à gauche, bord blanc à droite), ralentit dans les virages, s'arrête s'il ne voit plus la voie. |
+| **Suivi (personne)** | Suit la personne la plus proche devant lui (±35°, 0,3 à 2 m), repérée au lidar, à 0,7 m ; s'arrête s'il la perd. |
+
+Dans **tous les modes**, le robot ralentit sous 0,8 m et **s'arrête sous 0,35 m d'un obstacle** dans le sens de la marche (couloir du lidar, comme `obstacle_detector`), et ne repart qu'au-dessus de 0,45 m. Sa position s'affiche sur la carte de la piste (odométrie corrigée par le gyroscope, ou lidar avec `localization:=lidar`).
+
+Le nœud `teleop_web` tourne **sur le robot** et sert la page ; on l'ouvre dans le navigateur du PC.
 
 Pourquoi une page web et pas RViz ou l'interface Tkinter : le PC (100.64.212.x) et le robot (100.75.155.x) sont sur deux sous-réseaux différents, et la découverte DDS de ROS 2 ne passe pas entre eux (le conteneur ne voit aucun topic du robot). Une connexion TCP, comme SSH, passe.
 
 📍 Robot (`ssh jetson@100.75.155.201`) :
 ```bash
 pkill -f limo_base; pkill -f ydlidar; pkill -f astra       # un seul driver
-ros2 launch be_limo teleop.launch.py                       # driver + lidar + caméra + interface
+ros2 launch be_limo teleop.launch.py                       # robot posé au nœud 2
+ros2 launch be_limo teleop.launch.py initial_node:=9       # posé au nœud 9
+ros2 launch be_limo teleop.launch.py localization:=lidar map:=~/maps/salle207.yaml initial_node:=9
 ```
-✅ `Interface de téléopération : http://127.0.0.1:8080`.
+Lance : driver, lidar, caméra, odométrie corrigée (`odom_imu`), position sur la carte (`localization_node`), détection de voie (`vision_node`, une image sur deux) et le pilote.
+✅ `Odométrie corrigée : cap du gyroscope /limo/imu`, `Pose initiale : noeud 2`, `Vision sur /rgb/image_raw`, `Interface de téléopération : http://127.0.0.1:8080`.
 ❌ `real_l2` tourne déjà : `ros2 launch be_limo teleop.launch.py driver:=false` (pas de caméra si `real_l2` a été lancé sans `use_camera:=true`).
 
 📍 PC, terminal **hors conteneur** (`e70348u@...`) : ouvrir le tunnel, puis le navigateur.
@@ -346,17 +363,43 @@ Laisse ce terminal ouvert, et ouvre **http://localhost:8080** dans Firefox.
 | Zone | Contenu |
 |---|---|
 | **Vue de dessus** | Robot, lidar (orange), trajectoire prévue sur 1 m (vert). Encart agrandi : angle de **chaque roue avant** (Ackermann : la roue intérieure braque plus). Bleu plein = braquage envoyé, bleu pointillé = consigne, violet pointillé = braquage déduit de l'odométrie. |
-| **Caméra** | `/rgb/image_raw`, réduite à 320 px, ~8 images/s. |
-| **Commande** | Armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier, mode **Maintenir** (défaut) : tenir `Z`/↑ avance à la vitesse max, `S`/↓ recule, **lâcher = arrêt immédiat** ; tenir `Q`/← ou `D`/→ braque, lâcher = roues droites. Mode **Pas à pas** : chaque appui change la consigne (±0,02 m/s, ±2°). `Entrée` armer/désarmer, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
-| **Mesures** | v, ω et braquage : envoyés, sur `/cmd_vel`, vus par `/odom`, gyroscope `/limo/imu`. Un avertissement apparaît si l'odométrie ne voit pas un virage demandé. |
+| **Carte de la piste** | Routes, nœuds numérotés, position et cap du robot (`/robot_pose`). |
+| **Caméra** | Image brute (`/rgb/image_raw`) ou **détection de voie** (`/vision/debug`, choisie automatiquement en mode route), réduite à 320 px, ~8 images/s. |
+| **Commande** | Onglets **Manuel / Route / Suivi** (changer de mode désarme). Bandeau obstacles (voie libre, ralentit, arrêt). Route : décalage, angle et confiance de la voie. Suivi : distance et direction de la personne, bouton « Choisir la personne devant ». Manuel : armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier, mode **Maintenir** (défaut) : tenir `Z`/↑ avance à la vitesse max, `S`/↓ recule, **lâcher = arrêt immédiat** ; tenir `Q`/← ou `D`/→ braque, lâcher = roues droites. Mode **Pas à pas** : chaque appui change la consigne (±0,02 m/s, ±2°). `Entrée` armer/désarmer, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
+| **Mesures** | v, ω et braquage : envoyés, sur `/cmd_vel`, vus par `/odom` (driver), par `/odom_imu` (corrigée), gyroscope `/limo/imu`. Un avertissement apparaît si l'odométrie ne voit pas un virage demandé. |
+| **Vue de dessus (modes auto)** | Voie vue par la caméra (jaune pointillé), personne repérée (rose pointillé) ou suivie (rose plein). |
 
 Sécurité :
 - Rien n'est envoyé sur `/cmd_vel` tant que la commande n'est pas **armée** ; on arme toujours à vitesse 0. À l'armement, `local_controller` reçoit `pause`.
 - La page envoie la commande 10 fois par seconde. **Sans nouvelles pendant 0,5 s** (onglet fermé, réseau coupé), le robot s'arrête et se désarme. Il s'arrête aussi si l'onglet est caché ou si la fenêtre perd le focus.
-- Accélération en rampe (0,5 m/s²), ralentissement et arrêt immédiats, bornée par `max_speed` (0,30 m/s, `teleop.launch.py max_speed:=...`) et par le curseur « vitesse max » (0,15 par défaut).
+- Accélération en rampe (0,5 m/s²), ralentissement et arrêt immédiats, bornée par `max_speed` (0,30 m/s, `teleop.launch.py max_speed:=...`) et par le curseur « vitesse max » / « vitesse de croisière » (0,15 par défaut).
+- Obstacle à moins de 0,35 m dans le sens de la marche : vitesse nulle dans ce sens (on peut toujours reculer). Sans scan lidar récent (0,5 s), le robot n'avance pas.
+- Modes route et suivi : la page doit rester ouverte, au premier plan et armée (mêmes règles) ; `Espace` arrête tout.
 - Un seul onglet pilote à la fois.
 - Le serveur n'écoute que `localhost` : il faut l'accès SSH au robot. `host:=0.0.0.0` l'ouvre à tout le réseau de l'école (à éviter).
 
 Braquer à l'arrêt : en Ackermann, `limo_base` remet les roues droites quand la vitesse est nulle. L'option envoie une vitesse de 0,0002 m/s, que le driver arrondit à 0 mm/s, avec le braquage : les roues braquent sans que le robot avance. Pratique roues en l'air pour vérifier le braquage.
 
 Cinématique : la page donne (v, δ) ; le nœud envoie `ω = v·tan δ / L` avec **L = 0,20 m**, l'empattement utilisé par `limo_base`, qui retrouve ainsi exactement δ (`be_limo/teleop.py`, testé dans `test/test_teleop.py`).
+
+### 10.1. Mode route : comment ça marche
+
+`vision_node` donne la voie : décalage de la ligne centrale à 0,7 m devant et son angle (`/lane_detection`). Le pilote vise le point de la ligne centrale à **0,5 m** devant et braque par pure pursuit (`δ = atan(L · 2y / (x² + y²))`), filtré pour éviter les à-coups (`be_limo/lane_follow.py`). La vitesse baisse dans les virages et quand la détection est peu sûre ; sans voie pendant 0,6 s, arrêt.
+
+Essai dans Gazebo (06/11/2026, 0,15 m/s) : virage du nœud 2 au nœud 4 puis voie du haut, écart au centre de la voie 4 à 5 cm en moyenne, **arrêt à 0,35 m de l'obstacle**. Limite : aux carrefours, le robot suit la voie qu'il voit et ne choisit pas sa direction (écart jusqu'à 20 cm au carrefour du haut). Pour suivre un itinéraire, c'est `real_l2` (carte + planification).
+
+À régler sur le vrai robot : `camera_height` et `camera_pitch` de `vision_node` (`config/be_limo.yaml`), et les seuils de couleur (section 8). Vérifier d'abord, robot posé sur la piste et **désarmé**, que la vue « détection de voie » montre la voie en vert et que le décalage affiché est cohérent.
+
+### 10.2. Mode suivi : comment ça marche
+
+À la hauteur du lidar (~15 cm), une personne donne une ou deux petites taches (les jambes, 3 à 45 cm de large). Les longues taches (murs, tables) sont ignorées, ainsi que les morceaux de mur vus entre deux jambes (bords masqués). À l'armement, le robot s'accroche à la personne la plus proche devant lui, puis la suit d'un scan à l'autre (saut maximal 0,5 m, en tenant compte de son propre mouvement). Vitesse proportionnelle à l'écart à 0,7 m, jamais en arrière ; braquage par pure pursuit vers la personne. Perdue pendant 1 s : arrêt (`be_limo/person_follow.py`).
+
+Limites : le lidar ne distingue pas une jambe d'un pied de chaise ; si la personne passe à côté d'un objet fin, le robot peut s'accrocher à l'objet (il s'arrête alors à 0,7 m de lui). « Choisir la personne devant » relance l'accroche. Testé en simulation hors ligne (personne qui marche puis tourne : distance moyenne 0,55 à 1 m), pas encore sur le vrai robot.
+
+### 10.3. Odométrie corrigée par le gyroscope (`odom_imu`)
+
+Sur la LIMO 201, le châssis annonce le mode Mecanum alors qu'il roule en Ackermann : `limo_base` calcule alors un cap qui ne tourne jamais (diagnostic du 06/11/2026). `odom_imu` garde la vitesse des roues et prend le cap du gyroscope (`/limo/imu`, biais appris à l'arrêt). Comme le driver du labo publie déjà le TF `odom → base_link`, on ajoute un repère au-dessus : `odom_imu → odom`, si bien que `odom_imu → base_link` est la pose corrigée. `localization_node` (mode odom) lit `/odom_imu`, AMCL et slam_toolbox utilisent `odom_imu` comme repère d'odométrie.
+
+Lancée automatiquement avec le driver (`real_l2`, `teleop`, `mapping`). Si le driver est lancé à part (`limo_start` à la main) : ajouter `odom_imu:=true`.
+
+Étalonnage : rouler un tour complet (cap revenu au départ), comparer le cap de `/odom_imu` à 360° et régler `gyro_scale` si besoin.

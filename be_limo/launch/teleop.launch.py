@@ -1,8 +1,9 @@
-"""Téléopération web de la LIMO : à lancer SUR LE ROBOT.
+"""Pilote web de la LIMO (manuel, route, suivi) : à lancer SUR LE ROBOT.
 
-    ros2 launch be_limo teleop.launch.py                    # driver + lidar + caméra + interface
-    ros2 launch be_limo teleop.launch.py driver:=false      # si limo_start ou real_l2 tourne déjà
-    ros2 launch be_limo teleop.launch.py max_speed:=0.2
+    ros2 launch be_limo teleop.launch.py                          # tout : driver, caméra, vision, position
+    ros2 launch be_limo teleop.launch.py initial_node:=9          # robot posé au noeud 9
+    ros2 launch be_limo teleop.launch.py localization:=lidar map:=~/maps/salle207.yaml
+    ros2 launch be_limo teleop.launch.py driver:=false localization:=none   # avec mapping.launch.py
 
 Puis sur le PC (hors conteneur) :
     ssh -N -L 8080:localhost:8080 jetson@100.75.155.201
@@ -13,20 +14,23 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+from be_limo.launch_helpers import driver_actions, localization_actions
 
 
 def nodes(context):
     cfg = lambda name: LaunchConfiguration(name).perform(context)
-    actions = []
-    if cfg('driver') == 'true':
-        actions.append(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(
-                get_package_share_directory('limo_start'), 'launch', 'limo_real.launch.py')),
-            launch_arguments={'use_camera': cfg('use_camera')}.items()))
+    params = os.path.join(get_package_share_directory('be_limo'), 'config', 'be_limo.yaml')
+    actions = driver_actions(cfg('driver'), cfg('use_camera'), cfg('odom_imu'))
+    actions += localization_actions(cfg('localization'), cfg('initial_node'), cfg('map'))
+    if cfg('vision') == 'true' and cfg('use_camera') == 'true':
+        # Détection de la voie pour le mode route (une image sur deux : Jetson Nano).
+        actions.append(Node(package='be_limo', executable='vision_node', output='screen',
+                            parameters=[params, {'process_every': int(cfg('vision_every')),
+                                                 'image_topic': cfg('image_topic')}]))
     actions.append(Node(package='be_limo', executable='teleop_web', output='screen', parameters=[{
         'host': cfg('host'), 'port': int(cfg('port')),
         'max_speed': float(cfg('max_speed')), 'image_topic': cfg('image_topic'),
@@ -38,7 +42,17 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('driver', default_value='true',
                               description='lancer aussi limo_start (driver, lidar, caméra)'),
+        DeclareLaunchArgument('odom_imu', default_value='auto',
+                              description='odométrie corrigée par le gyroscope : auto (avec le driver), true, false'),
         DeclareLaunchArgument('use_camera', default_value='true'),
+        DeclareLaunchArgument('vision', default_value='true', description='détection de voie (mode route)'),
+        DeclareLaunchArgument('vision_every', default_value='2', description='traiter une image sur N'),
+        DeclareLaunchArgument('localization', default_value='odom',
+                              description='odom (départ sur initial_node), lidar (AMCL) ou none'),
+        DeclareLaunchArgument('initial_node', default_value='2',
+                              description='noeud de la piste où le robot est posé au démarrage'),
+        DeclareLaunchArgument('map', default_value='~/maps/salle207.yaml',
+                              description='carte lidar de la salle (localization:=lidar)'),
         DeclareLaunchArgument('host', default_value='127.0.0.1',
                               description='127.0.0.1 = accès par tunnel SSH seulement ; 0.0.0.0 = tout le réseau'),
         DeclareLaunchArgument('port', default_value='8080'),

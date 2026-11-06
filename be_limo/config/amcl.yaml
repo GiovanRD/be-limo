@@ -4,7 +4,7 @@
 amcl:
   ros__parameters:
     base_frame_id: base_link
-    odom_frame_id: odom
+    odom_frame_id: odom_imu        # odométrie corrigée par le gyroscope (odom_imu_node)
     global_frame_id: room_map
     scan_topic: scan
     robot_model_type: differential

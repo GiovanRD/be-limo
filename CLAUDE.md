@@ -38,7 +38,12 @@ Le reste du dépôt (`limo/`, `environment/`, `room207-limo/`, ...) est une copi
   mettre les `pkill` dans un script copié sur le robot (`scp`), puis l'exécuter.
 - `local_controller` : `speed` de `config/be_limo.yaml` (0,25) l'emporte sur `speed:=` du launch. Vitesse effective :
   `ros2 param get /local_controller speed`. La fixer sans bouger : commande `{"cmd": "pause", "speed": 0.15}`.
-- Sur ce robot, le gyroscope est sur `/limo/imu` (pas `/imu`). Caméra : `/rgb/image_raw` (640×480 rgb8).
+- Sur ce robot, le gyroscope est sur `/limo/imu` (100 Hz, pas `/imu`), `/odom` à 50 Hz. Caméra : `/rgb/image_raw` (640×480 rgb8).
+- Jetson Nano chargé : avec le pilote web + vision, ~50 % de CPU libre. Chaque abonnement Python à 100 Hz coûte ~30 % d'un cœur ;
+  ne pas lire de paramètre ROS ni l'horloge ROS dans un callback rapide. `ros2 topic hz` ne répond pas toujours : compter avec un script rclpy.
+- Gazebo dans le conteneur : la caméra simulée ne publie rien si `DISPLAY` est faux (sans message d'erreur).
+  L'écran du PC est `:1` : `xhost +local:docker` puis lancer avec `DISPLAY=:1`.
+- Relancer sur le robot : nos `launch` laissent parfois des noeuds orphelins (doublons, charge ×2). `~/diag/start_teleop.sh` tue tout avant.
 - `scp -r be_limo` échoue sur les `__pycache__` créés par root dans le conteneur : copier avec
   `tar --exclude=__pycache__ -czf - be_limo | ssh jetson@100.75.155.201 "tar -xzf - -C ~/ros2_ws/src"`.
 
@@ -48,8 +53,10 @@ Le reste du dépôt (`limo/`, `environment/`, `room207-limo/`, ...) est une copi
 - Robot réel (robot) : `ros2 launch be_limo real_l2.launch.py initial_node:=2 mission:=demo use_camera:=true`
 - Cartographie de la salle : `ros2 launch be_limo mapping.launch.py start_node:=2 map:=~/maps/salle207.yaml`
 - Localisation lidar : `... real_l2.launch.py localization:=lidar map:=~/maps/salle207.yaml initial_node:=<n>`
-- **Téléopération web** (vue robot + roues, lidar, caméra, pilotage) : robot `ros2 launch be_limo teleop.launch.py`,
-  PC hors conteneur `ssh -N -L 8080:localhost:8080 jetson@100.75.155.201`, puis http://localhost:8080 (README section 10).
+- **Pilote web** (modes manuel / route caméra / suivi de personne, arrêt obstacles, carte, caméra) :
+  robot `ros2 launch be_limo teleop.launch.py [initial_node:=N] [localization:=lidar map:=...]`
+  (ou `bash ~/diag/start_teleop.sh` qui arrête d'abord tout), PC hors conteneur
+  `ssh -N -L 8080:localhost:8080 jetson@100.75.155.201`, puis http://localhost:8080 (README section 10).
 - Tests sans ROS (n'importe où avec Python 3, numpy, OpenCV, pytest) : `cd be_limo && python3 -m pytest -q test/`
 
 ## Sécurité
@@ -66,5 +73,8 @@ demander confirmation à l'utilisateur et vérifier que la piste est dégagée. 
   en Ackermann (`motion_mode: 1` forcé dans `limo_start`) ; le driver calcule l'odométrie dans le mode du châssis.
   Piste de correction : cap à partir du gyroscope `/limo/imu` dans `localization_node`. Braquage saccadé : le driver
   remet les roues droites à chaque `v = 0` (arrêts `STOP_OBSTACLE` répétés).
-- Téléopération web : écrite et essayée sur le robot (caméra, lidar, armement et arrêt à vitesse 0) ; pas encore de roulage.
+- Odométrie corrigée `odom_imu` (cap du gyroscope) : écrite, lancée avec le driver, testée hors ligne ; pas encore vérifiée en roulant.
+- Pilote web (manuel / route / suivi + arrêt obstacles + carte) : déployé sur le robot (tout démarre, rien n'a roulé).
+  Mode route testé dans Gazebo (voie suivie à ~5 cm, arrêt à 0,35 m de l'obstacle). Mode suivi testé hors ligne seulement.
+  À faire au sol : vérifier la détection de voie (robot désarmé sur la piste, calibrer camera_height/pitch), puis essais à 0,10 m/s.
 - Localisation lidar (AMCL) : écrite, pas encore essayée (carte de la salle à faire).

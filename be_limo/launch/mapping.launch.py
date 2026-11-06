@@ -5,8 +5,8 @@ la carte lidar commence là, ce qui la relie à la carte de la piste.
 
     ros2 launch be_limo mapping.launch.py start_node:=2 map:=~/maps/salle207.yaml
 
-Puis piloter le robot au clavier sur toute la piste (autre terminal) :
-    ros2 run teleop_twist_keyboard teleop_twist_keyboard
+Puis piloter le robot sur toute la piste avec la téléopération web (autre terminal) :
+    ros2 launch be_limo teleop.launch.py driver:=false localization:=none
 et enregistrer la carte (autre terminal) :
     ros2 run nav2_map_server map_saver_cli -f ~/maps/salle207
 """
@@ -15,22 +15,18 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+from be_limo.launch_helpers import driver_actions
 
 
 def nodes(context):
     share = get_package_share_directory('be_limo')
     cfg = lambda name: LaunchConfiguration(name).perform(context)
     map_yaml = os.path.expanduser(cfg('map'))
-    actions = []
-    if cfg('driver') == 'true':
-        actions.append(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(
-                get_package_share_directory('limo_start'), 'launch', 'limo_real.launch.py')),
-            launch_arguments={'use_camera': 'false'}.items()))
+    actions = driver_actions(cfg('driver'), 'false', cfg('odom_imu'))
     slam_defaults = os.path.join(get_package_share_directory('slam_toolbox'), 'config',
                                  'mapper_params_online_async.yaml')
     params = [os.path.join(share, 'config', 'slam.yaml')]
@@ -56,5 +52,7 @@ def generate_launch_description():
                               description='carte à enregistrer ensuite avec map_saver_cli'),
         DeclareLaunchArgument('driver', default_value='true',
                               description='lancer aussi limo_start (driver, lidar)'),
+        DeclareLaunchArgument('odom_imu', default_value='auto',
+                              description='odométrie corrigée par le gyroscope : auto (avec le driver), true, false'),
         OpaqueFunction(function=nodes),
     ])

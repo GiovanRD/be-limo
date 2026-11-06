@@ -60,6 +60,7 @@ class Localization(Node):
         d('initial_node', -1)
         d('initial_pose', [0.0, 0.0, 0.0])
         d('publish_tf', True)
+        d('odom_topic', '/odom')            # robot réel : /odom_imu (cap du gyroscope)
         # lidar mode
         d('map_yaml', '')                   # lidar map, e.g. ~/maps/salle207.yaml
         d('calibration_file', '')           # default: <map>_track.yaml
@@ -91,7 +92,7 @@ class Localization(Node):
             self.offset, self.waiting_first_odom = None, True
         self.odom_pose = None
         self.tf = TransformBroadcaster(self) if self.get_parameter('publish_tf').value else None
-        self.create_subscription(Odometry, '/odom', self.on_odom, 20)
+        self.create_subscription(Odometry, self.get_parameter('odom_topic').value, self.on_odom, 20)
         self.create_subscription(PoseWithCovarianceStamped, '/initialpose', self.on_initialpose_odom, 10)
 
     def on_initialpose_odom(self, msg):

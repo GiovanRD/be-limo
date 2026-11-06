@@ -18,41 +18,20 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+from be_limo.launch_helpers import driver_actions, localization_actions
 
 
 def nodes(context):
     share = get_package_share_directory('be_limo')
     params = os.path.join(share, 'config', 'be_limo.yaml')
     cfg = lambda name: LaunchConfiguration(name).perform(context)
-    actions = []
-    if cfg('driver') == 'true':
-        actions.append(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(
-                get_package_share_directory('limo_start'), 'launch', 'limo_real.launch.py')),
-            launch_arguments={'use_camera': cfg('use_camera')}.items()))
-    if cfg('localization') == 'lidar':
-        map_yaml = os.path.expanduser(cfg('map'))
-        amcl = os.path.join(share, 'config', 'amcl.yaml')
-        actions += [
-            Node(package='nav2_map_server', executable='map_server', name='map_server', output='screen',
-                 parameters=[amcl, {'yaml_filename': map_yaml}]),
-            Node(package='nav2_amcl', executable='amcl', name='amcl', output='screen', parameters=[amcl]),
-            Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
-                 name='lifecycle_manager_localization', output='screen',
-                 parameters=[{'autostart': True, 'node_names': ['map_server', 'amcl']}]),
-            Node(package='be_limo', executable='localization_node', output='screen',
-                 parameters=[{'mode': 'lidar', 'map_yaml': map_yaml,
-                              'initial_node': int(cfg('initial_node'))}]),
-        ]
-    else:
-        actions.append(
-            Node(package='be_limo', executable='localization_node', output='screen',
-                 parameters=[{'odom_is_world': False, 'initial_node': int(cfg('initial_node'))}]))
+    actions = driver_actions(cfg('driver'), cfg('use_camera'), cfg('odom_imu'))
+    actions += localization_actions(cfg('localization'), cfg('initial_node'), cfg('map'))
     actions += [
         Node(package='be_limo', executable='global_planner', output='screen',
              parameters=[params, {'mission': cfg('mission')}]),
@@ -71,6 +50,8 @@ def generate_launch_description():
                               description='noeud de la carte où le robot est posé au démarrage'),
         DeclareLaunchArgument('driver', default_value='true',
                               description='lancer aussi limo_start (driver, lidar)'),
+        DeclareLaunchArgument('odom_imu', default_value='auto',
+                              description='odométrie corrigée par le gyroscope : auto (avec le driver), true, false'),
         DeclareLaunchArgument('use_camera', default_value='false'),
         DeclareLaunchArgument('mission', default_value=''),
         DeclareLaunchArgument('speed', default_value='0.15', description='vitesse nominale [m/s]'),

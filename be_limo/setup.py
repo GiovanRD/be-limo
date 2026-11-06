@@ -34,6 +34,7 @@ setup(
             'traffic_light_manager = be_limo.traffic_light_manager:main',
             'supervisor = be_limo.supervisor_gui:main',
             'teleop_web = be_limo.teleop_web_node:main',
+            'odom_imu = be_limo.odom_imu_node:main',
         ],
     },
 )

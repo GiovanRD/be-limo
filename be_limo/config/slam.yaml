@@ -3,7 +3,7 @@
 
 slam_toolbox:
   ros__parameters:
-    odom_frame: odom
+    odom_frame: odom_imu           # odométrie corrigée par le gyroscope (odom_imu_node)
     map_frame: room_map
     base_frame: base_link
     scan_topic: /scan

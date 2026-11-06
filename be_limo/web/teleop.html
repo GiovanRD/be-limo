@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LIMO 201 — Téléopération</title>
+<title>LIMO 201 — Pilote</title>
 <style>
   :root {
     --bg: #12151a; --panel: #1b2027; --line: #2c333d; --text: #e6e9ee; --muted: #8c96a3;
@@ -11,6 +11,7 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 12px 16px 24px; }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 12px; }
@@ -51,13 +52,24 @@
   .kbpad { display: grid; grid-template-columns: repeat(3, 3.2em); gap: 4px; margin-left: auto; }
   .kbpad kbd { text-align: center; padding: 4px 0; transition: background .08s; }
   .kbpad kbd.on { background: var(--accent); color: #04121f; border-color: var(--accent); }
+  .tabs { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .tabs button { flex: 1; background: #1f262f; color: var(--muted); border: 0; padding: 9px 6px; font: inherit;
+                 font-weight: 600; cursor: pointer; border-right: 1px solid var(--line); }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on { background: var(--accent); color: #04121f; }
+  .info { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-variant-numeric: tabular-nums; }
+  .info dt { color: var(--muted); } .info dd { margin: 0; }
+  .safety { border-radius: 8px; padding: 6px 10px; font-weight: 600; }
+  .safety.ok { background: rgba(60,207,122,.10); color: var(--ok); }
+  .safety.slow { background: rgba(242,179,61,.14); color: var(--warn); }
+  .safety.stop { background: rgba(255,90,82,.16); color: var(--bad); }
   .legend span { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; }
   .sw { width: 12px; height: 3px; display: inline-block; border-radius: 2px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>LIMO 201 — Téléopération</h1>
+  <h1>LIMO 201 — Pilote</h1>
   <span id="link" class="pill bad">Robot : pas de réponse</span>
   <span id="mode" class="pill">Mode châssis : ?</span>
   <span id="batt" class="pill">Batterie : ?</span>
@@ -66,6 +78,7 @@
 </header>
 
 <div class="grid">
+  <div style="display:grid; gap:12px; min-width:0; align-content:start">
   <div class="card">
     <h2><span>Vue de dessus — robot, roues, lidar</span>
         <span class="row" style="gap:6px">Portée
@@ -78,32 +91,62 @@
       <span><i class="sw" style="background:#c9a7ff"></i>braquage vu par l'odométrie</span>
       <span><i class="sw" style="background:var(--ok)"></i>trajectoire prévue (1 m)</span>
       <span><i class="sw" style="background:var(--lidar)"></i>lidar</span>
+      <span><i class="sw" style="background:#ff5ad1"></i>personne suivie</span>
+      <span><i class="sw" style="background:#f2e35a"></i>voie vue par la caméra</span>
     </div>
+  </div>
+  <div class="card">
+    <h2><span>Carte de la piste</span><span id="mapInfo" class="note"></span></h2>
+    <canvas id="map" width="600" height="760"></canvas>
+  </div>
   </div>
 
   <div style="display:grid; gap:12px; min-width:0">
     <div class="card">
-      <h2><span>Caméra</span><span id="camInfo" class="note"></span></h2>
+      <h2><span>Caméra <select id="camSrc" class="b" style="padding:2px 6px; margin-left:6px">
+            <option value="raw">image brute</option><option value="debug">détection de voie</option></select></span>
+          <span id="camInfo" class="note"></span></h2>
       <img id="cam" alt="Pas d'image caméra (use_camera:=true ?)">
     </div>
 
     <div class="card controls">
       <h2><span>Commande</span><span id="reason" class="note"></span></h2>
+      <div class="tabs" role="tablist">
+        <button data-mode="manual" class="on">Manuel</button>
+        <button data-mode="route">Route (caméra)</button>
+        <button data-mode="follow">Suivi (personne)</button>
+      </div>
       <div class="row">
         <button id="arm" class="b">Armer la commande</button>
-        <button id="zeroV" class="b">Vitesse 0</button>
-        <button id="zeroS" class="b">Braquage 0</button>
+        <button id="zeroV" class="b manual-only">Vitesse 0</button>
+        <button id="zeroS" class="b manual-only">Braquage 0</button>
+        <button id="reacq" class="b follow-only" hidden>Choisir la personne devant</button>
       </div>
       <div id="otherTab" class="warnbox" hidden>Le robot est piloté depuis un autre onglet ou un autre PC.</div>
+      <div id="safetyBox" class="safety ok">Obstacles : voie libre</div>
+      <dl id="routeInfo" class="info" hidden>
+        <dt>Voie</dt><dd id="rState">—</dd>
+        <dt>Décalage</dt><dd id="rOff">—</dd>
+        <dt>Angle</dt><dd id="rHead">—</dd>
+        <dt>Confiance</dt><dd id="rConf">—</dd>
+      </dl>
+      <dl id="followInfo" class="info" hidden>
+        <dt>Suivi</dt><dd id="fState">—</dd>
+        <dt>Personne</dt><dd id="fTarget">—</dd>
+        <dt>Distance voulue</dt><dd id="fDist">—</dd>
+      </dl>
+      <div id="manualCtl" style="display:grid; gap:12px">
       <label class="slider">Vitesse
         <input id="v" type="range" min="-0.3" max="0.3" step="0.01" value="0">
         <span id="vVal" class="val">0,00 m/s</span></label>
       <label class="slider">Braquage
         <input id="s" type="range" min="-25" max="25" step="0.5" value="0" style="direction: rtl">
         <span id="sVal" class="val">0,0°</span></label>
-      <label class="slider">Vitesse max
+      </div>
+      <label class="slider"><span id="vmaxLbl">Vitesse max</span>
         <input id="vmax" type="range" min="0.05" max="0.3" step="0.01" value="0.15">
         <span id="vmaxVal" class="val">0,15 m/s</span></label>
+      <div id="manualCtl2" style="display:grid; gap:12px">
       <label class="row note"><input id="sip" type="checkbox"> Braquer à l'arrêt (montre le braquage roues en l'air, vitesse 0)</label>
       <div class="row">
         <span>Clavier</span>
@@ -120,7 +163,13 @@
         <b>Maintenir</b> : tiens <kbd>Z</kbd>/<kbd>↑</kbd> pour avancer à la vitesse max, <kbd>S</kbd>/<kbd>↓</kbd> pour reculer ;
         <b>lâche = arrêt immédiat</b>. Tiens <kbd>Q</kbd>/<kbd>←</kbd> ou <kbd>D</kbd>/<kbd>→</kbd> pour braquer ; lâche = roues droites.<br>
         <b>Pas à pas</b> : chaque appui change la vitesse de 0,02 m/s ou le braquage de 2°.<br>
-        <kbd>Entrée</kbd> armer/désarmer · <kbd>X</kbd> vitesse 0 · <kbd>C</kbd> braquage 0 · <kbd>Espace</kbd> ARRÊT.<br>
+        <kbd>X</kbd> vitesse 0 · <kbd>C</kbd> braquage 0.
+      </div>
+      </div>
+      <div class="note">
+        <span id="autoHelp" hidden></span>
+        <kbd>Entrée</kbd> armer/désarmer · <kbd>Espace</kbd> ARRÊT. Dans tous les modes, le robot ralentit sous 0,8 m
+        et s'arrête sous 0,35 m d'un obstacle dans le sens de la marche.<br>
         Le robot s'arrête tout seul si la page ne répond plus pendant 0,5 s, si l'onglet est caché ou si la fenêtre perd le focus.
       </div>
     </div>
@@ -132,7 +181,8 @@
         <tbody>
           <tr><td>Envoyé par l'interface</td><td id="tSv"></td><td id="tSw"></td><td id="tSs"></td></tr>
           <tr><td>Sur /cmd_vel</td><td id="tCv"></td><td id="tCw"></td><td id="tCs"></td></tr>
-          <tr><td>Odométrie /odom</td><td id="tOv"></td><td id="tOw"></td><td id="tOs"></td></tr>
+          <tr><td>Odométrie /odom (driver)</td><td id="tOv"></td><td id="tOw"></td><td id="tOs"></td></tr>
+          <tr><td>Odométrie corrigée /odom_imu</td><td id="tQv"></td><td id="tQw"></td><td id="tQs"></td></tr>
           <tr><td>Gyroscope /imu</td><td></td><td id="tIw"></td><td></td></tr>
         </tbody>
       </table>
@@ -151,6 +201,8 @@ const deg = r => r * 180 / Math.PI;
 
 let S = null;            // dernier état reçu
 let armed = false;
+let mode = 'manual';     // manual / route / follow (donné par le robot)
+const isAuto = () => mode !== 'manual';
 let lastOk = 0;
 
 // ------------------------------------------------------------------ commande
@@ -174,7 +226,31 @@ async function post(path, body) {
   return [r.status, await r.json().catch(() => ({}))];
 }
 function cmdBody() {
+  if (isAuto()) return {armed, v: vmax()};          // vitesse de croisière
   return {armed, v: +vEl.value, steering: +sEl.value * Math.PI / 180, steer_in_place: $('sip').checked};
+}
+// Choix du mode : le robot désarme à chaque changement.
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = async () => {
+  if (b.dataset.mode === mode) return;
+  armed = false; refreshArm(); held.clear(); setV(0); setS(0);
+  const [code, res] = await post('/api/cmd', {mode: b.dataset.mode}).catch(() => [0, {}]);
+  if (code === 200) setMode(res.mode || b.dataset.mode); else alertMsg(res.error || 'Robot injoignable');
+});
+$('reacq').onclick = () => post('/api/cmd', {reacquire: true}).catch(() => {});
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('manualCtl').hidden = $('manualCtl2').hidden = m !== 'manual';
+  document.querySelectorAll('.manual-only').forEach(e => e.hidden = m !== 'manual');
+  $('reacq').hidden = m !== 'follow';
+  $('routeInfo').hidden = m !== 'route';
+  $('followInfo').hidden = m !== 'follow';
+  $('vmaxLbl').textContent = m === 'manual' ? 'Vitesse max' : 'Vitesse de croisière';
+  $('autoHelp').hidden = m === 'manual';
+  $('autoHelp').innerHTML = m === 'route'
+    ? '<b>Route</b> : le robot suit la voie vue par la caméra (ligne jaune à gauche, bord blanc à droite) et s\'arrête s\'il ne la voit plus. '
+    : m === 'follow' ? '<b>Suivi</b> : le robot suit la personne la plus proche devant lui (±35°, 0,3 à 2 m) à 0,7 m, et s\'arrête s\'il la perd. ' : '';
+  if (camAuto) { $('camSrc').value = m === 'route' ? 'debug' : 'raw'; connectCam(); }
 }
 async function stop(why) {
   armed = false; vEl.value = 0; showSliders(); refreshArm();
@@ -228,7 +304,7 @@ document.addEventListener('keydown', e => {
   if (k === 'x') { e.preventDefault(); setV(0); return; }
   if (k === 'c') { e.preventDefault(); setS(0); return; }
   const dir = DIRS[k];
-  if (!dir) return;
+  if (!dir || isAuto()) return;
   e.preventDefault();
   if (holdMode()) { held.add(dir); return; }
   if (dir === 'up') setV(+vEl.value + 0.02);
@@ -253,7 +329,7 @@ let lastTick = performance.now();
 setInterval(() => {
   const now = performance.now(), dt = (now - lastTick) / 1000;
   lastTick = now;
-  if (!holdMode()) return;
+  if (!holdMode() || isAuto()) return;
   // vitesse : avancer/reculer à la « vitesse max », 0 sinon (le robot freine en rampe)
   const fwd = held.has('up'), back = held.has('down');
   const v = fwd && !back ? vmax() : back && !fwd ? -vmax() : 0;
@@ -289,6 +365,27 @@ function applyState() {
   if (!armed) alertMsg(t.reason || '');
   else alertMsg('armé');
   $('otherTab').hidden = !t.owner_other;
+  if (t.mode && t.mode !== mode) setMode(t.mode);
+
+  const sf = S.safety || {};
+  const dist = sf.distance == null ? '' : ' (' + fr(sf.distance, 2) + ' m)';
+  if (sf.blocked) { $('safetyBox').className = 'safety stop'; $('safetyBox').textContent = '⛔ Obstacle trop près' + dist + ' : arrêt'; }
+  else if (sf.slowed) { $('safetyBox').className = 'safety slow'; $('safetyBox').textContent = '⚠ Obstacle' + dist + ' : ralentit'; }
+  else { $('safetyBox').className = 'safety ok'; $('safetyBox').textContent = 'Obstacles : voie libre' + (t.armed ? dist : ''); }
+
+  if (S.lane) {
+    const ln = S.lane;
+    $('rState').textContent = ln.state + (ln.valid ? '' : ' (caméra : pas de voie)');
+    $('rOff').textContent = ln.offset == null ? '—' : fr(ln.offset * 100, 1) + ' cm ' + (ln.offset > 0 ? '(voie à gauche)' : '(voie à droite)');
+    $('rHead').textContent = ln.heading == null ? '—' : fr(deg(ln.heading), 1) + '°';
+    $('rConf').textContent = ln.confidence == null ? '—' : fr(ln.confidence * 100, 0) + ' %';
+  }
+  if (S.follow) {
+    const f = S.follow, tg = f.target || f.preview;
+    $('fState').textContent = f.state + (f.preview && !f.target ? ' — personne repérée, armer pour suivre' : '');
+    $('fTarget').textContent = tg ? fr(Math.hypot(tg[0], tg[1]), 2) + ' m, ' + fr(deg(Math.atan2(tg[1], tg[0])), 0) + '°' : 'aucune';
+    $('fDist').textContent = fr(f.distance, 2) + ' m';
+  }
 
   if (S.status) {
     const m = S.status;
@@ -310,6 +407,8 @@ function applyState() {
   if (S.odom) { const o = S.odom; $('tOv').textContent = fr(o.v, 3); $('tOw').textContent = fr(o.omega, 3);
                 $('tOs').textContent = fr(deg(o.steering), 1) + '°'; }
   if (S.imu) $('tIw').textContent = fr(S.imu.omega, 3);
+  if (S.odom_imu) { const o = S.odom_imu; $('tQv').textContent = fr(o.v, 3); $('tQw').textContent = fr(o.omega, 3);
+                    $('tQs').textContent = fr(deg(o.steering), 1) + '°'; }
   const p = S.pose || S.odom;
   $('poseTxt').textContent = p ? ((S.pose ? '/robot_pose' : '/odom') + ' : x = ' + fr(p.x) + ' m, y = ' + fr(p.y) +
                                   ' m, cap = ' + fr(deg(p.yaw), 1) + '°') : '';
@@ -318,14 +417,17 @@ function applyState() {
   if (S.odom && S.imu && Math.abs(S.odom.v) > 0.03) {
     const wc = S.cmd_vel ? S.cmd_vel.omega : 0;
     if (Math.abs(wc) > 0.05 && Math.abs(S.odom.omega) < 0.01)
-      d = '⚠ Virage demandé (ω = ' + fr(wc, 2) + ') mais l\'odométrie donne ω ≈ 0 : elle ne voit pas les virages.';
+      d = '⚠ Virage demandé (ω = ' + fr(wc, 2) + ') mais /odom donne ω ≈ 0 : le driver ne voit pas les virages' +
+          (S.odom_imu ? ', /odom_imu (gyroscope) les voit.' : ' et /odom_imu ne tourne pas.');
   }
-  if (S.status && S.status.motion_mode !== 1)
+  if (S.status && S.status.motion_mode !== 1 && !S.odom_imu)
     d += (d ? ' ' : '') + '⚠ Le châssis annonce le mode ' + S.status.motion_mode_name +
-         ' : l\'odométrie du driver est calculée dans ce mode.';
+         ' : l\'odométrie du driver est fausse en virage, lancer odom_imu (teleop.launch.py le fait).';
   $('diag').textContent = d;
-  $('camInfo').textContent = S.camera ? (S.camera.width + '×' + S.camera.height + ', ' +
-                             (S.camera_age < 1 ? 'en direct' : 'figée ' + fr(S.camera_age, 0) + ' s')) : 'pas de caméra';
+  const camKey = $('camSrc').value === 'debug' ? 'camera_debug' : 'camera';
+  $('camInfo').textContent = S[camKey] ? (S[camKey].width + '×' + S[camKey].height + ', ' +
+                             (S[camKey + '_age'] < 1 ? 'en direct' : 'figée ' + fr(S[camKey + '_age'], 0) + ' s'))
+                             : (camKey === 'camera_debug' ? 'pas d\'image de la vision (vision_node ?)' : 'pas de caméra');
 }
 setInterval(() => {
   const age = (performance.now() - lastOk) / 1000;
@@ -396,6 +498,27 @@ function draw() {
   }
   g.stroke();
 
+  // voie vue par la caméra : ligne centrale, décalage à x_ref, angle
+  if (S.lane && S.lane.valid) {
+    const ln = S.lane;
+    g.strokeStyle = '#f2e35a'; g.lineWidth = 3 * dpr; g.setLineDash([8 * dpr, 6 * dpr]);
+    g.beginPath();
+    for (let k = 0; k <= 10; k++) {
+      const x = 0.25 + k * 0.1, y = ln.offset + Math.tan(ln.heading) * (x - ln.x_ref);
+      const [u, v] = P(x, y); k ? g.lineTo(u, v) : g.moveTo(u, v);
+    }
+    g.stroke(); g.setLineDash([]);
+  }
+  // personne suivie (plein) ou repérée (pointillés)
+  if (S.follow && (S.follow.target || S.follow.preview)) {
+    const tg = S.follow.target || S.follow.preview;
+    const [u, v] = P(tg[0], tg[1]);
+    g.strokeStyle = '#ff5ad1'; g.lineWidth = 3 * dpr; g.setLineDash(S.follow.target ? [] : [5 * dpr, 4 * dpr]);
+    g.beginPath(); g.arc(u, v, 0.18 * scale, 0, 2 * Math.PI); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#ff5ad1'; g.font = (12 * dpr) + 'px system-ui'; g.textAlign = 'center';
+    g.fillText(S.follow.target ? 'suivie' : 'repérée', u, v - 0.22 * scale);
+    g.textAlign = 'left';
+  }
   drawRobot(P, scale, false);
 
   // Encart : le robot en grand, avec l'angle de chaque roue avant.
@@ -467,10 +590,58 @@ function draw() {
     return [Math.atan(L / (R - T / 2)), Math.atan(L / (R + T / 2))];
   }
 }
-(function loop() { draw(); requestAnimationFrame(loop); })();
+// ------------------------------------------------------------ carte de la piste
+let MAP = null;
+fetch('/api/map').then(r => r.json()).then(m => { MAP = m; }).catch(() => {});
+const mc = $('map'), mg = mc.getContext('2d');
+function resizeMap() {
+  const w = mc.clientWidth, dpr = window.devicePixelRatio || 1;
+  mc.width = Math.round(w * dpr); mc.height = Math.round(w * 1.15 * dpr);
+}
+window.addEventListener('resize', resizeMap); resizeMap();
+function drawMap() {
+  const W = mc.width, H = mc.height, dpr = window.devicePixelRatio || 1;
+  mg.clearRect(0, 0, W, H);
+  if (!MAP || !MAP.edges) return;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  MAP.edges.forEach(e => e.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }));
+  const m = 0.35;
+  x0 -= m; x1 += m; y0 -= m; y1 += m;
+  const sc = Math.min(W / (x1 - x0), H / (y1 - y0));
+  const ox = (W - sc * (x1 - x0)) / 2, oy = (H - sc * (y1 - y0)) / 2;
+  const M = (x, y) => [ox + (x - x0) * sc, H - oy - (y - y0) * sc];
+  // routes
+  mg.lineCap = 'round'; mg.lineJoin = 'round';
+  mg.strokeStyle = '#2a313a'; mg.lineWidth = 0.28 * sc;
+  MAP.edges.forEach(e => { mg.beginPath(); e.forEach(([x, y], i) => { const [u, v] = M(x, y); i ? mg.lineTo(u, v) : mg.moveTo(u, v); }); mg.stroke(); });
+  mg.strokeStyle = '#56606c'; mg.lineWidth = 1.2 * dpr;
+  MAP.edges.forEach(e => { mg.beginPath(); e.forEach(([x, y], i) => { const [u, v] = M(x, y); i ? mg.lineTo(u, v) : mg.moveTo(u, v); }); mg.stroke(); });
+  // noeuds
+  mg.font = (10 * dpr) + 'px system-ui'; mg.textAlign = 'center';
+  MAP.nodes.forEach(([x, y], i) => {
+    const [u, v] = M(x, y);
+    mg.fillStyle = '#ff5a52'; mg.beginPath(); mg.arc(u, v, 3 * dpr, 0, 2 * Math.PI); mg.fill();
+    mg.fillStyle = '#8c96a3'; mg.fillText(String(i), u, v - 6 * dpr);
+  });
+  // robot
+  if (S && S.pose) {
+    const p = S.pose, [u, v] = M(p.x, p.y);
+    const fresh = S.pose_age < 1.5;
+    mg.save(); mg.translate(u, v); mg.rotate(-p.yaw);
+    const r = Math.max(9 * dpr, 0.2 * sc);
+    mg.fillStyle = fresh ? '#4aa3ff' : '#56606c'; mg.strokeStyle = '#e6e9ee'; mg.lineWidth = 1.5 * dpr;
+    mg.beginPath(); mg.moveTo(r, 0); mg.lineTo(-0.7 * r, 0.6 * r); mg.lineTo(-0.7 * r, -0.6 * r); mg.closePath();
+    mg.fill(); mg.stroke(); mg.restore();
+    $('mapInfo').textContent = 'x ' + fr(p.x) + ' · y ' + fr(p.y) + ' · cap ' + fr(deg(p.yaw), 0) + '°' + (fresh ? '' : ' (position figée)');
+  } else $('mapInfo').textContent = 'pas de position (/robot_pose) : localization:=odom ou lidar';
+  mg.textAlign = 'left';
+}
+(function loop() { draw(); drawMap(); requestAnimationFrame(loop); })();
 
 // caméra : on (re)connecte le flux MJPEG s'il coupe
-function connectCam() { $('cam').src = '/api/camera.mjpg?' + Date.now(); }
+let camAuto = true;      // suit le mode (route -> détection), sauf choix à la main
+function connectCam() { $('cam').src = '/api/camera.mjpg?src=' + $('camSrc').value + '&t=' + Date.now(); }
+$('camSrc').addEventListener('change', () => { camAuto = false; connectCam(); });
 $('cam').onerror = () => setTimeout(connectCam, 2000);
 connectCam();
 showSliders(); refreshArm(); poll();
