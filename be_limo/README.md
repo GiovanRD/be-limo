@@ -347,7 +347,7 @@ Laisse ce terminal ouvert, et ouvre **http://localhost:8080** dans Firefox.
 |---|---|
 | **Vue de dessus** | Robot, lidar (orange), trajectoire prévue sur 1 m (vert). Encart agrandi : angle de **chaque roue avant** (Ackermann : la roue intérieure braque plus). Bleu plein = braquage envoyé, bleu pointillé = consigne, violet pointillé = braquage déduit de l'odométrie. |
 | **Caméra** | `/rgb/image_raw`, réduite à 320 px, ~8 images/s. |
-| **Commande** | Armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier : `Z`/`S` ou ↑/↓ vitesse, `Q`/`D` ou ←/→ braquage, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
+| **Commande** | Armer, curseurs vitesse et braquage, vitesse max, « braquer à l'arrêt ». Clavier, mode **Maintenir** (défaut) : tenir `Z`/↑ avance à la vitesse max, `S`/↓ recule, lâcher = freinage ; tenir `Q`/← ou `D`/→ braque, lâcher = roues droites. Mode **Pas à pas** : chaque appui change la consigne (±0,02 m/s, ±2°). `Entrée` armer/désarmer, `X` vitesse 0, `C` braquage 0, **`Espace` ARRÊT**. |
 | **Mesures** | v, ω et braquage : envoyés, sur `/cmd_vel`, vus par `/odom`, gyroscope `/limo/imu`. Un avertissement apparaît si l'odométrie ne voit pas un virage demandé. |
 
 Sécurité :

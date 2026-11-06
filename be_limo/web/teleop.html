@@ -48,6 +48,9 @@
   .warnbox { border: 1px solid var(--warn); color: var(--warn); border-radius: 8px; padding: 6px 10px; font-size: 13px; }
   kbd { background: #26303b; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
         padding: 0 5px; font: 12px ui-monospace, monospace; }
+  .kbpad { display: grid; grid-template-columns: repeat(3, 3.2em); gap: 4px; margin-left: auto; }
+  .kbpad kbd { text-align: center; padding: 4px 0; transition: background .08s; }
+  .kbpad kbd.on { background: var(--accent); color: #04121f; border-color: var(--accent); }
   .legend span { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; }
   .sw { width: 12px; height: 3px; display: inline-block; border-radius: 2px; }
 </style>
@@ -102,10 +105,22 @@
         <input id="vmax" type="range" min="0.05" max="0.3" step="0.01" value="0.15">
         <span id="vmaxVal" class="val">0,15 m/s</span></label>
       <label class="row note"><input id="sip" type="checkbox"> Braquer à l'arrêt (montre le braquage roues en l'air, vitesse 0)</label>
+      <div class="row">
+        <span>Clavier</span>
+        <select id="kbmode" class="b" style="padding:4px 8px">
+          <option value="hold" selected>Maintenir (comme un jeu)</option>
+          <option value="step">Pas à pas</option>
+        </select>
+        <div id="kbpad" class="kbpad" aria-hidden="true">
+          <span></span><kbd id="key-up">Z ↑</kbd><span></span>
+          <kbd id="key-left">Q ←</kbd><kbd id="key-down">S ↓</kbd><kbd id="key-right">D →</kbd>
+        </div>
+      </div>
       <div class="note">
-        <kbd>Z</kbd>/<kbd>↑</kbd> <kbd>S</kbd>/<kbd>↓</kbd> vitesse ±0,02 ·
-        <kbd>Q</kbd>/<kbd>←</kbd> <kbd>D</kbd>/<kbd>→</kbd> braquage ±2° ·
-        <kbd>X</kbd> vitesse 0 · <kbd>C</kbd> braquage 0 · <kbd>Espace</kbd> ARRÊT.<br>
+        <b>Maintenir</b> : tiens <kbd>Z</kbd>/<kbd>↑</kbd> pour avancer à la vitesse max, <kbd>S</kbd>/<kbd>↓</kbd> pour reculer ;
+        lâche = freinage. Tiens <kbd>Q</kbd>/<kbd>←</kbd> ou <kbd>D</kbd>/<kbd>→</kbd> pour braquer ; lâche = roues droites.<br>
+        <b>Pas à pas</b> : chaque appui change la vitesse de 0,02 m/s ou le braquage de 2°.<br>
+        <kbd>Entrée</kbd> armer/désarmer · <kbd>X</kbd> vitesse 0 · <kbd>C</kbd> braquage 0 · <kbd>Espace</kbd> ARRÊT.<br>
         Le robot s'arrête tout seul si la page ne répond plus pendant 0,5 s, si l'onglet est caché ou si la fenêtre perd le focus.
       </div>
     </div>
@@ -193,19 +208,59 @@ setInterval(async () => {
 document.addEventListener('visibilitychange', () => { if (document.hidden && armed) stop('onglet caché'); });
 window.addEventListener('blur', () => { if (armed) stop('fenêtre sans focus'); });
 
+// ------------------------------------------------------------------ clavier
+// Mode « maintenir » (défaut, comme un jeu) : le robot roule tant qu'on tient
+// avancer/reculer et s'arrête quand on lâche ; les roues braquent tant qu'on
+// tient gauche/droite et reviennent droites quand on lâche.
+// Mode « pas à pas » : chaque appui change la consigne, qui reste.
+const DIRS = {z: 'up', w: 'up', arrowup: 'up', s: 'down', arrowdown: 'down',
+              q: 'left', a: 'left', arrowleft: 'left', d: 'right', arrowright: 'right'};
+const held = new Set();
+const holdMode = () => $('kbmode').value === 'hold';
+const STEER_RATE = 90;      // °/s : vitesse de braquage au clavier
+const STEER_BACK = 120;     // °/s : retour des roues au centre
+
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'SELECT') return;
+  if (e.target.tagName === 'SELECT' || e.ctrlKey || e.altKey || e.metaKey) return;
   const k = e.key.toLowerCase();
-  const map = {
-    ' ': () => stop('espace'),
-    'z': () => setV(+vEl.value + 0.02), 'arrowup': () => setV(+vEl.value + 0.02),
-    's': () => setV(+vEl.value - 0.02), 'arrowdown': () => setV(+vEl.value - 0.02),
-    'q': () => setS(+sEl.value + 2), 'arrowleft': () => setS(+sEl.value + 2),
-    'd': () => setS(+sEl.value - 2), 'arrowright': () => setS(+sEl.value - 2),
-    'x': () => setV(0), 'c': () => setS(0),
-  };
-  if (map[k]) { e.preventDefault(); map[k](); }
+  if (k === ' ') { e.preventDefault(); held.clear(); stop('espace'); return; }
+  if (k === 'enter') { e.preventDefault(); if (!e.repeat) $('arm').click(); return; }
+  if (k === 'x') { e.preventDefault(); setV(0); return; }
+  if (k === 'c') { e.preventDefault(); setS(0); return; }
+  const dir = DIRS[k];
+  if (!dir) return;
+  e.preventDefault();
+  if (holdMode()) { held.add(dir); return; }
+  if (dir === 'up') setV(+vEl.value + 0.02);
+  if (dir === 'down') setV(+vEl.value - 0.02);
+  if (dir === 'left') setS(+sEl.value + 2);
+  if (dir === 'right') setS(+sEl.value - 2);
 });
+document.addEventListener('keyup', e => {
+  const dir = DIRS[e.key.toLowerCase()];
+  if (dir) held.delete(dir);
+});
+window.addEventListener('blur', () => held.clear());
+
+let lastTick = performance.now();
+setInterval(() => {
+  const now = performance.now(), dt = (now - lastTick) / 1000;
+  lastTick = now;
+  if (!holdMode()) return;
+  // vitesse : avancer/reculer à la « vitesse max », 0 sinon (le robot freine en rampe)
+  const fwd = held.has('up'), back = held.has('down');
+  const v = fwd && !back ? vmax() : back && !fwd ? -vmax() : 0;
+  if (+vEl.value !== v) setV(v);
+  // braquage : tourne tant qu'on tient, revient au centre quand on lâche
+  let s = +sEl.value;
+  const left = held.has('left'), right = held.has('right');
+  if (left && !right) s += STEER_RATE * dt;
+  else if (right && !left) s -= STEER_RATE * dt;
+  else s = Math.sign(s) * Math.max(0, Math.abs(s) - STEER_BACK * dt);
+  if (s !== +sEl.value) setS(s);
+  ['up', 'down', 'left', 'right'].forEach(d => $('key-' + d).classList.toggle('on', held.has(d)));
+}, 20);
+$('kbmode').addEventListener('change', () => { held.clear(); setV(0); $('kbpad').hidden = !holdMode(); });
 
 // ------------------------------------------------------------------- état
 async function poll() {
@@ -219,7 +274,9 @@ async function poll() {
 function pill(el, text, cls) { el.textContent = text; el.className = 'pill ' + (cls || ''); }
 function applyState() {
   const t = S.teleop;
-  sEl.min = -deg(t.max_steering); sEl.max = deg(t.max_steering);
+  // bornes arrondies au pas du curseur (0,5°), sinon 0 n'est plus atteignable
+  const smax = Math.floor(deg(t.max_steering) * 2) / 2;
+  if (+sEl.max !== smax) { sEl.min = -smax; sEl.max = smax; }
   vmaxEl.max = t.max_speed;
   if (armed && !t.armed) { armed = false; refreshArm(); vEl.value = 0; showSliders(); }
   if (!armed) alertMsg(t.reason || '');
