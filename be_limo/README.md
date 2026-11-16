@@ -316,3 +316,32 @@ ros2 launch be_limo real_l2.launch.py localization:=lidar map:=~/maps/salle207.y
 Démarrage et arrêt comme en section 5. Robot posé ailleurs que sur un nœud : donne sa position avec **2D Pose Estimate** dans RViz (Fixed Frame `map`). Notre programme la transmet à AMCL.
 
 Vérifier que la localisation suit bien : pousse le robot à la main de 50 cm, ou fais-le rouler, et regarde que `ros2 topic echo /robot_pose` suit son déplacement réel.
+
+---
+
+## Version MATLAB (dossier `matlab/`)
+
+La loi de commande et le scénario existent aussi en MATLAB, sans ROS, pour étudier le contrôleur seul. Les fichiers sont courts et utilisent les mêmes paramètres que `config/be_limo.yaml`.
+
+| Fichier | Rôle |
+|---|---|
+| `parametres_limo.m` | paramètres du robot (empattement, butée de direction) et du contrôleur |
+| `modele_limo.m` | modèle cinématique bicyclette : `x' = v cos θ`, `y' = v sin θ`, `θ' = v tan δ / L` |
+| `pure_pursuit.m` | loi de commande : point visé à `Ld = 0,25 + 0,6·v`, `δ = atan(2·L·sin α / Ld)`, vitesse réduite en virage |
+| `simu_suivi.m` | suivi de la boucle de démonstration : trajectoire, écart au chemin, vitesse |
+| `simu_scenario.m` | même boucle avec le panneau stop, l'obstacle et le feu (rouge 12 s, vert 12 s) |
+| `chemin_demo.txt`, `noeuds.txt` | chemin de la boucle (un point tous les 2 cm) et nœuds de la carte, exportés de `roadmap.py` |
+
+Utilisation, dans MATLAB :
+```matlab
+cd be_limo/matlab
+simu_suivi       % affiche la durée du tour et l'écart moyen et maximal au chemin
+simu_scenario    % affiche la durée et le début de chaque arrêt
+```
+Pour essayer un autre réglage, modifier `parametres_limo.m` (par exemple `k_Ld` ou `v_nominale`) et relancer.
+
+Pour exporter un autre itinéraire :
+```bash
+cd be_limo
+python3 -c "from be_limo.roadmap import RoadMap; r = RoadMap(); _, pts = r.plan([2, 16]); open('matlab/chemin.txt', 'w').write(''.join('%.4f %.4f\n' % p for p in pts))"
+```
