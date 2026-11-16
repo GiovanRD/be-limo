@@ -44,9 +44,12 @@ Le reste du dépôt (`limo/`, `environment/`, `room207-limo/`, ...) est une copi
 Le robot roule pour de vrai : avant toute commande qui le fait bouger (`start`, téléopération, `cmd_vel`),
 demander confirmation à l'utilisateur et vérifier que la piste est dégagée. Vitesse ≤ 0,15 m/s pour les premiers essais.
 
-## État au 06/11/2026
+## État au 16/11/2026
 
-- Simulation et tests hors ligne : OK.
-- Robot réel : driver, lidar et caméra OK, détection de voie OK. Premier essai du parcours : le robot a bougé mais
-  n'a pas suivi la route (cause pas encore identifiée : à diagnostiquer avec `/robot_pose` et `/controller/state`).
+- Simulation et tests hors ligne : OK (boucle complète, stop, obstacle, feu rouge).
+- Robot réel : driver, lidar et caméra OK ; le lidar l'empêche de heurter les murs. Les détections de la caméra
+  (voie, feux, stop) ne sont pas encore exploitées dans la conduite. La loi de commande ne suffit pas encore à faire
+  un parcours d'un point à un autre : le robot quitte la route. Diagnostic à faire : comparer /robot_pose au
+  déplacement réel (1 m en ligne droite, un virage), vérifier le sens et l'amplitude du braquage pour un ω donné.
 - Localisation lidar (AMCL) : écrite, pas encore essayée (carte de la salle à faire).
+- Livrable 2 : rapport PDF dans livrables/Livrable2_Groupe1.pdf.
