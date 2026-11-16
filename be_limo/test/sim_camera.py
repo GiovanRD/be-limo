@@ -13,12 +13,14 @@ TRACK_W, TRACK_H = 4.88, 6.20
 
 
 def find_texture():
-    here = os.path.dirname(os.path.abspath(__file__))
-    for root in (os.path.join(here, '..', '..'), os.path.join(here, '..', '..', '..')):
-        path = os.path.join(root, 'environment', 'qcar_large_track', 'models',
-                            'qcar_large_track', 'materials', 'textures', 'SDCS_MapLayout.png')
-        if os.path.exists(path):
-            return path
+    """Track texture of the environment repository, searched next to this package."""
+    rel = os.path.join('environment', 'qcar_large_track', 'models', 'qcar_large_track',
+                       'materials', 'textures', 'SDCS_MapLayout.png')
+    folder = os.path.dirname(os.path.abspath(__file__))
+    for _ in range(6):
+        folder = os.path.dirname(folder)
+        if os.path.exists(os.path.join(folder, rel)):
+            return os.path.join(folder, rel)
     return None
 
 
