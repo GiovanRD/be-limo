@@ -113,7 +113,8 @@ def draw_signs(bgr, detections):
         colour = (0, 0, 255) if d.state == 'red' or d.kind == 'stop_sign' else (0, 255, 0)
         r = int(max(4, d.radius_px * 1.8))
         cv2.circle(out, (int(d.u), int(d.v)), r, colour, 1)
-        label = ('FEU ' + d.state.upper()) if d.kind == 'traffic_light' else 'STOP'
+        label = ('FEU ' + {'red': 'ROUGE', 'green': 'VERT'}.get(d.state, d.state.upper())
+                 if d.kind == 'traffic_light' else 'STOP')
         cv2.putText(out, '%s %.2fm' % (label, d.distance), (int(d.u) - 20, int(d.v) - r - 3),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35, colour, 1)
     return out

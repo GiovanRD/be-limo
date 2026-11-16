@@ -230,7 +230,9 @@ def draw_lane(bgr, result, cam=None, p=None):
         pts = [(int(u), int(v)) for u, v in zip(us, vs) if np.isfinite(u) and np.isfinite(v)]
         for a, b in zip(pts, pts[1:]):
             cv2.line(out, a, b, (0, 255, 0), 2)
-    label = 'voie: %s  dy=%+.3f m  cap=%+.1f deg' % (
-        result.source, result.offset, math.degrees(result.heading))
+    source = {'both': '2 lignes', 'left': 'ligne jaune', 'right': 'bord blanc',
+              'none': 'non detectee'}.get(result.source, result.source)
+    label = 'voie (%s)  dy=%+.3f m  cap=%+.1f deg' % (
+        source, result.offset, math.degrees(result.heading))
     cv2.putText(out, label, (4, 14), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 255, 0), 1)
     return out
