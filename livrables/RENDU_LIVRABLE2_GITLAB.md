@@ -1,6 +1,8 @@
 # Rendre le livrable 2 sur le GitLab de l'université
 
-**But** : mettre notre travail dans le dépôt GitLab du groupe (`Students/BE/BE-2026-Group-01`), puis déposer **le lien de ce dépôt** sur Arche.
+**But** : mettre notre travail sur une **nouvelle branche `livrable2`** du dépôt GitLab du groupe (`Students/BE/BE-2026-Group-01`, notre copie de `room207-limo`), puis déposer **le lien de cette branche** sur Arche.
+
+La branche `main` du dépôt n'est pas touchée : elle reste identique à `room207-limo`. Tout le livrable 2 est sur `livrable2`.
 
 **Ce qu'on dépose** : seulement le contenu de `livrables/livrable2_gitlab.zip`, c'est-à-dire :
 - `README.md` : le README demandé par la consigne (configuration, architecture, démonstration). Il **remplace** celui du labo à la racine du dépôt ;
@@ -88,11 +90,24 @@ git clone COLLE_ICI_L_ADRESSE_HTTPS groupe01
 ❌ `Authentication failed` : le token est mal collé ou n'a pas les bons droits. Refais A1.
 ❌ `groupe01 existe déjà` : fais `cd groupe01 && git pull`, puis passe à A4.
 
-## A4. Y mettre notre travail
+## A4. Créer la branche `livrable2`
 
 📍 **PC**, invite `e70348u@bi-fdd-f-l001:~$`
 ```bash
 cd ~/gitlab/groupe01
+git switch main
+git pull
+git switch -c livrable2
+git branch
+```
+✅ `* livrable2` (l'étoile indique la branche active).
+❌ `fatal: a branch named 'livrable2' already exists` : elle a déjà été créée. Fais `git switch livrable2` (et `git pull` si elle existe aussi sur GitLab).
+❌ `main` n'existe pas : la branche principale s'appelle peut-être `master`. Remplace `main` par `master`.
+
+## A5. Y mettre notre travail
+
+📍 **PC**, invite `e70348u@bi-fdd-f-l001:~/gitlab/groupe01$`
+```bash
 rm -rf ros2_foxy/be_limo
 unzip -o ~/ros2_ws/src/be-limo/livrables/livrable2_gitlab.zip
 ls ros2_foxy
@@ -117,19 +132,24 @@ git status
 ```
 ✅ Seulement `modifié : README.md` et `ros2_foxy/be_limo/` (fichiers non suivis).
 
-## A5. Envoyer sur GitLab
+## A6. Envoyer la branche sur GitLab
 
 📍 **PC**, invite `e70348u@bi-fdd-f-l001:~/gitlab/groupe01$`
+```bash
+git branch
+```
+✅ `* livrable2`. Si l'étoile est sur une autre branche, fais `git switch livrable2` avant de continuer.
+
 ```bash
 git config user.name "Giovan ROCCA-DURINGER"
 git config user.email "TON_ADRESSE@etu.univ-lorraine.fr"
 git add README.md ros2_foxy/be_limo
 git commit -m "Livrable 2 : planification, contrôle et détection en simulation"
-git push
+git push -u origin livrable2
 ```
-✅ Les dernières lignes ressemblent à `main -> main` (ou `master -> master`).
-❌ `rejected ... (fetch first)` : quelqu'un a envoyé quelque chose entre-temps. Fais `git pull --rebase` puis `git push`.
-❌ `You are not allowed to push` / `403` : pas le rôle Developer, ou branche protégée. Voir « Vérifier tes droits », ou passe par la méthode B avec une *merge request*.
+✅ Les dernières lignes contiennent `* [new branch]      livrable2 -> livrable2`. GitLab propose aussi de créer une *merge request* : **ne la crée pas**, le livrable reste sur sa branche.
+❌ `rejected ... (fetch first)` : la branche existe déjà sur GitLab avec d'autres changements. Fais `git pull --rebase origin livrable2` puis `git push`.
+❌ `You are not allowed to push` / `403` : pas le rôle Developer. Voir « Vérifier tes droits ».
 
 ➡️ Passe à la partie **C**.
 
@@ -155,13 +175,22 @@ Pas de terminal ni de token : tout se fait sur gitlab.univ-lorraine.fr.
 **Ton adresse de l'université au lieu de Gmail** : ouvre `ros2_foxy/be_limo/package.xml` et `ros2_foxy/be_limo/setup.py` avec un éditeur de texte, remplace l'adresse Gmail, enregistre.
 **Nom du dépôt** : s'il n'est pas `be-2026-group-01`, ouvre `README.md`, cherche (Ctrl+F) `be-2026-group-01` et corrige.
 
-## B2. Ouvrir l'éditeur web de GitLab (Web IDE)
+## B2. Créer la branche `livrable2`
 
 1. Ouvre le dépôt **BE-2026-Group-01** sur GitLab.
-2. Clique sur **Edit** → **Web IDE** (ou appuie sur la touche **.** du clavier sur la page du dépôt).
-3. Un éditeur ressemblant à VS Code s'ouvre, avec la liste des fichiers du dépôt à gauche.
+2. Menu de gauche : **Code** → **Branches** → bouton **New branch**.
+3. **Branch name** : `livrable2` ; **Create from** : `main` (ou `master`).
+4. **Create branch**.
 
-## B3. Ajouter le dossier `be_limo`
+✅ GitLab affiche la page du dépôt sur la branche `livrable2` : le menu déroulant au-dessus des fichiers indique `livrable2`.
+
+## B3. Ouvrir l'éditeur web (Web IDE) sur cette branche
+
+1. Vérifie que le menu déroulant des branches, au-dessus de la liste des fichiers, indique bien **`livrable2`**. Sinon, sélectionne-la.
+2. Clique sur **Edit** → **Web IDE** (ou appuie sur la touche **.** du clavier).
+3. Un éditeur ressemblant à VS Code s'ouvre. En bas à gauche, il doit afficher la branche **`livrable2`**.
+
+## B4. Ajouter le dossier `be_limo`
 
 1. Dans la liste de gauche, déplie le dossier **ros2_foxy**.
 2. Depuis ton explorateur de fichiers, **glisse-dépose le dossier `be_limo`** (celui de `ros2_foxy/be_limo` décompressé) **sur le dossier `ros2_foxy`** du Web IDE.
@@ -169,21 +198,21 @@ Pas de terminal ni de token : tout se fait sur gitlab.univ-lorraine.fr.
 
 ❌ Le glisser-déposer de dossier ne marche pas (navigateur ou version de GitLab) : clic droit sur `ros2_foxy` → **New folder** `be_limo`, puis clic droit sur ce dossier → **Upload...** pour envoyer les fichiers, dossier par dossier. C'est plus long, mais ça marche partout. Pense à recréer chaque sous-dossier (`be_limo`, `launch`, `config`...) avant d'y envoyer ses fichiers.
 
-## B4. Remplacer le README à la racine
+## B5. Remplacer le README à la racine
 
 1. Dans la liste de gauche, ouvre **README.md** (à la racine, pas celui de `be_limo`).
 2. Sélectionne tout (**Ctrl+A**) et supprime.
 3. Ouvre notre `README.md` décompressé avec un éditeur de texte, copie tout (**Ctrl+A**, **Ctrl+C**), puis colle-le dans le Web IDE (**Ctrl+V**).
 
-## B5. Enregistrer (commit)
+## B6. Enregistrer (commit) sur `livrable2`
 
 1. Clique sur l'icône **Source Control** dans la barre de gauche (les trois ronds reliés, avec un chiffre : le nombre de fichiers modifiés).
 2. Vérifie la liste : `README.md` modifié, et les fichiers de `ros2_foxy/be_limo/` ajoutés. **Rien d'autre.**
 3. Message : `Livrable 2 : planification, contrôle et détection en simulation`
-4. Clique sur **Commit and push to 'main'** (ou **Commit to 'main'**).
-   - Si GitLab propose **Create new branch** parce que `main` est protégée : accepte, puis crée la **merge request** proposée et fusionne-la (**Merge**). Si tu n'as pas le droit de fusionner, demande à l'enseignant.
+4. Clique sur **Commit and push to 'livrable2'**. Vérifie bien que c'est **`livrable2`**, pas `main`.
+   - Si GitLab propose de créer une nouvelle branche ou une *merge request* : refuse, et vérifie que tu es bien sur `livrable2` (B3).
 
-✅ Un message confirme le commit. En revenant sur la page du dépôt, la date du dernier commit est la tienne.
+✅ Un message confirme le commit. Sur la page du dépôt, branche `livrable2` sélectionnée, la date du dernier commit est la tienne.
 
 ➡️ Passe à la partie **C**.
 
@@ -193,21 +222,26 @@ Pas de terminal ni de token : tout se fait sur gitlab.univ-lorraine.fr.
 
 ## C1. Vérifier sur GitLab
 
-Ouvre le dépôt **BE-2026-Group-01** dans le navigateur :
+Ouvre le dépôt **BE-2026-Group-01** dans le navigateur, et **sélectionne la branche `livrable2`** dans le menu déroulant au-dessus des fichiers. Sur `main`, tu verras l'ancien contenu : c'est normal.
 
 - [ ] la page d'accueil affiche **notre README** (titre « BE Véhicule Autonome 2026 — Groupe 1 ») ;
 - [ ] le dossier **`ros2_foxy/be_limo`** existe, avec `be_limo/`, `launch/`, `config/`, `worlds/`, `matlab/`, `test/`, `README.md` ;
 - [ ] `ros2_foxy/be_limo/be_limo/` contient bien les fichiers `.py` (ex. `pure_pursuit.py`, `global_planner_node.py`) ;
 - [ ] la carte des nœuds s'affiche dans `ros2_foxy/be_limo/README.md` ;
 - [ ] il n'y a **pas** de `CLAUDE.md`, ni de dossiers `limo/` ou `environment/` ;
-- [ ] `ros2_foxy/room207_limo` et `matlab/` (fournis par le labo) sont toujours là.
+- [ ] `ros2_foxy/room207_limo` et `matlab/` (fournis par le labo) sont toujours là ;
+- [ ] **Code → Branches** affiche `livrable2`, et la branche `main` est inchangée.
 
-## C2. Déposer le lien sur Arche
+## C2. Déposer le lien de la branche sur Arche
 
-1. Copie l'adresse de la **page d'accueil** du dépôt (barre du navigateur). Elle ressemble à
-   `https://gitlab.univ-lorraine.fr/coll/l-inp/ensem/robotic_lab/students/be/be-2026-group-01`
-   (pas l'adresse en `.git`).
-2. Sur Arche, ligne **16/11/2026 — L2.1–L3.1** → **Déposer** → colle le lien → valide.
+Le lien doit ouvrir directement la branche `livrable2`. Sinon, l'enseignant arrive sur `main` et ne voit pas le livrable.
+
+1. Sur GitLab, branche **`livrable2`** sélectionnée, copie l'adresse de la barre du navigateur. Elle se termine par **`/-/tree/livrable2`**, par exemple :
+   `https://gitlab.univ-lorraine.fr/coll/l-inp/ensem/robotic_lab/students/be/be-2026-group-01/-/tree/livrable2`
+2. Vérifie-le : colle-le dans un nouvel onglet. Il doit afficher notre README avec la branche `livrable2` sélectionnée.
+3. Sur Arche, ligne **16/11/2026 — L2.1–L3.1** → **Déposer** → colle le lien → valide.
+
+Pour être sûr que l'enseignant ne se trompe pas de branche, ajoute un commentaire en déposant, s'il y a un champ prévu : « Livrable sur la branche `livrable2` ».
 
 ---
 
@@ -239,9 +273,10 @@ Notez ce qui se passe et prenez des captures d'écran : elles serviront pour l'o
 
 | # | Méthode A (terminal) | Méthode B (navigateur) |
 |---|---|---|
-| 1 | créer un token `write_repository` | télécharger et décompresser le zip |
-| 2 | `git pull` du GitHub | corriger e-mail et nom du dépôt dans les fichiers |
-| 3 | `git clone` du dépôt du groupe dans `~/gitlab` | ouvrir le Web IDE du dépôt |
-| 4 | `unzip -o` du zip, corriger e-mail et nom du dépôt | glisser `be_limo` dans `ros2_foxy` |
-| 5 | `git add`, `git commit`, `git push` | remplacer `README.md`, puis *Commit and push* |
-| 6 | **C** : vérifier sur GitLab, déposer le lien sur Arche | **C** : vérifier sur GitLab, déposer le lien sur Arche |
+| 1 | créer un token `write_repository` | télécharger et décompresser le zip, corriger e-mail et nom du dépôt |
+| 2 | `git pull` du GitHub | créer la branche `livrable2` (Code → Branches → New branch) |
+| 3 | `git clone` du dépôt du groupe dans `~/gitlab` | ouvrir le Web IDE **sur `livrable2`** |
+| 4 | `git switch -c livrable2` | glisser `be_limo` dans `ros2_foxy` |
+| 5 | `unzip -o` du zip, corriger e-mail et nom du dépôt | remplacer `README.md` |
+| 6 | `git add`, `git commit`, `git push -u origin livrable2` | *Commit and push to 'livrable2'* |
+| 7 | **C** : vérifier la branche, déposer le lien `.../-/tree/livrable2` sur Arche | **C** : idem |

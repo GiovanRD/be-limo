@@ -44,6 +44,16 @@ Le reste du dépôt (`limo/`, `environment/`, `room207-limo/`, ...) est une copi
 Le robot roule pour de vrai : avant toute commande qui le fait bouger (`start`, téléopération, `cmd_vel`),
 demander confirmation à l'utilisateur et vérifier que la piste est dégagée. Vitesse ≤ 0,15 m/s pour les premiers essais.
 
+## Rendu des livrables (GitLab de l'université)
+
+- Les livrables se rendent sur le dépôt GitLab **du groupe** : `Students/BE/BE-2026-Group-01` (fork de `room207-limo`),
+  **sur une branche dédiée par livrable** : livrable 2 → branche **`livrable2`** (créée depuis `main`). Ne pas modifier `main`.
+- Contenu de la branche `livrable2` : celui de `livrables/livrable2_gitlab.zip` (README.md à la racine + `ros2_foxy/be_limo/`,
+  version sans la supervision). Rien d'autre du dépôt GitHub (pas de `CLAUDE.md`, `limo/`, `environment/`...).
+- Copie locale du dépôt GitLab : `~/gitlab/groupe01`, **hors** de `~/ros2_ws/src` (sinon `room207_limo` en double pour colcon).
+- Lien à déposer sur Arche : `<adresse du dépôt>/-/tree/livrable2`.
+- Procédure complète : `livrables/RENDU_LIVRABLE2_GITLAB.md`. Toujours montrer les commandes git (push) à l'utilisateur avant de les lancer.
+
 ## État au 16/11/2026
 
 - Simulation et tests hors ligne : OK (boucle complète, stop, obstacle, feu rouge).
