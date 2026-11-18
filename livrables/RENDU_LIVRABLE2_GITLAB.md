@@ -3,12 +3,42 @@
 **But** : mettre notre travail dans le dépôt GitLab du groupe (`Students/BE/BE-2026-Group-01`), puis déposer **le lien de ce dépôt** sur Arche.
 
 **Ce qu'on dépose** : seulement le contenu de `livrables/livrable2_gitlab.zip`, c'est-à-dire :
-- `README.md` : le README demandé par la consigne (configuration, architecture, démonstration). Il remplace celui du labo à la racine du dépôt ;
-- `ros2_foxy/be_limo/` : notre paquet ROS 2 (code, launch, réglages, monde Gazebo, MATLAB, tests).
+- `README.md` : le README demandé par la consigne (configuration, architecture, démonstration). Il **remplace** celui du labo à la racine du dépôt ;
+- le dossier `ros2_foxy/be_limo/` : notre paquet ROS 2 (code, launch, réglages, monde Gazebo, MATLAB, tests).
 
 **Ce qu'on ne dépose pas** : le reste du GitHub (`limo/`, `environment/`, `CLAUDE.md`, `rendu_1/`, le PDF...).
 
-Chaque étape indique **où** taper la commande. Regarde toujours le début de la ligne du terminal :
+**Deux méthodes, au choix**
+
+| | Méthode A : terminal + token | Méthode B : à la main dans le navigateur |
+|---|---|---|
+| Outils | terminal du PC, git | navigateur seulement |
+| Avantages | rapide, fiable, tous les fichiers d'un coup | rien à installer, pas de token |
+| Inconvénients | il faut créer un token | plus de clics ; dépend de la version de GitLab |
+| Durée | ~15 min | ~20 min |
+
+Les deux méthodes donnent le même résultat. Finis ensuite par la partie **C. Vérifier et déposer sur Arche**.
+
+---
+
+## Avant de commencer (les deux méthodes)
+
+### Récupérer l'adresse et le nom du dépôt du groupe
+
+1. Va sur **gitlab.univ-lorraine.fr** et connecte-toi.
+2. **Robotic lab** → **Students** → **BE** → **BE-2026-Group-01**.
+3. Note le **nom exact** du dépôt (par exemple `be-2026-group-01`).
+4. Pour la méthode A seulement : clique sur le bouton bleu **Code**, et copie l'adresse sous **Clone with HTTPS** (elle se termine par `.git`).
+
+### Vérifier tes droits
+
+Menu de gauche du dépôt → **Manage** → **Members** : ton compte doit avoir le rôle **Developer** (ou plus). Sinon, tu ne pourras pas envoyer de fichiers : demande à l'enseignant.
+
+---
+
+# A. Méthode avec le terminal et un token
+
+Chaque étape indique **où** taper la commande. Regarde le début de la ligne du terminal :
 
 | Invite | Tu es sur |
 |---|---|
@@ -16,38 +46,21 @@ Chaque étape indique **où** taper la commande. Regarde toujours le début de l
 | `root@bi-fdd-f-l001:/#` | le conteneur Docker : tape `exit` pour revenir au PC |
 | `jetson@nano:~$` | le robot : tape `exit` pour revenir au PC |
 
-Durée : 15 minutes environ.
+## A1. Créer un token GitLab (une seule fois)
 
----
+Le terminal n'accepte pas le mot de passe universitaire : il faut un **token**.
 
-## Étape 1 : créer un token GitLab (une seule fois)
-
-Le terminal ne prend pas ton mot de passe universitaire : il faut un **token**.
-
-1. Va sur **gitlab.univ-lorraine.fr** et connecte-toi.
-2. Clique sur ton **avatar** (en haut à gauche ou à droite) → **Preferences** (ou **Edit profile**).
-3. Menu de gauche : **Access tokens** (ou **Personal access tokens**) → **Add new token**.
-4. Remplis :
+1. Sur GitLab, clique sur ton **avatar** → **Preferences** (ou **Edit profile**).
+2. Menu de gauche : **Access tokens** (ou **Personal access tokens**) → **Add new token**.
+3. Remplis :
    - **Token name** : `PC ecole`
    - **Expiration date** : dans un mois
-   - **Scopes** : coche **`write_repository`** (et `read_repository`)
-5. **Create personal access token**, puis **copie le token** (il commence par `glpat-`).
+   - **Scopes** : coche **`read_repository`** et **`write_repository`**
+4. **Create personal access token**, puis **copie le token** (il commence par `glpat-`).
 
 ⚠️ Le token ne s'affiche qu'une fois. Ne le mets dans aucun fichier du dépôt.
 
----
-
-## Étape 2 : récupérer l'adresse du dépôt du groupe
-
-1. Sur GitLab : **Robotic lab** → **Students** → **BE** → **BE-2026-Group-01**.
-2. Clique sur le bouton bleu **Code**.
-3. Copie l'adresse sous **Clone with HTTPS** (elle se termine par `.git`).
-
-Note aussi le **nom exact** du dépôt (par exemple `be-2026-group-01`) : il sert à l'étape 5.
-
----
-
-## Étape 3 : récupérer la dernière version de notre travail
+## A2. Récupérer la dernière version de notre travail
 
 📍 **PC**, invite `e70348u@bi-fdd-f-l001:~$`
 ```bash
@@ -55,13 +68,10 @@ cd ~/ros2_ws/src/be-limo
 git pull
 ls livrables
 ```
-✅ Tu vois `livrable2_gitlab.zip` (et ce fichier).
-
+✅ Tu vois `livrable2_gitlab.zip`.
 ❌ GitHub demande un identifiant : Username `GiovanRD`, Password = ton **token GitHub** (`ghp_...`).
 
----
-
-## Étape 4 : copier le dépôt GitLab du groupe sur le PC
+## A3. Copier le dépôt GitLab du groupe sur le PC
 
 On le met **en dehors** du workspace ROS (`~/ros2_ws/src`). Le dépôt du groupe contient aussi `room207_limo`, et `colcon` refuserait deux paquets du même nom.
 
@@ -69,116 +79,141 @@ On le met **en dehors** du workspace ROS (`~/ros2_ws/src`). Le dépôt du groupe
 ```bash
 mkdir -p ~/gitlab
 cd ~/gitlab
-git clone COLLE_ICI_L_ADRESSE_DE_L_ETAPE_2 groupe01
+git clone COLLE_ICI_L_ADRESSE_HTTPS groupe01
 ```
 - **Username** : ton identifiant universitaire (ex. `e88049u`)
-- **Password** : le **token GitLab** de l'étape 1 (collé avec Ctrl+Maj+V ; rien ne s'affiche, c'est normal)
+- **Password** : le **token GitLab** (collé avec Ctrl+Maj+V ; rien ne s'affiche, c'est normal)
 
 ✅ `Clonage dans 'groupe01'...` puis `Résolution des deltas: 100%`.
+❌ `Authentication failed` : le token est mal collé ou n'a pas les bons droits. Refais A1.
+❌ `groupe01 existe déjà` : fais `cd groupe01 && git pull`, puis passe à A4.
 
-📍 **PC**, invite `e70348u@bi-fdd-f-l001:~/gitlab$`
+## A4. Y mettre notre travail
+
+📍 **PC**, invite `e70348u@bi-fdd-f-l001:~$`
 ```bash
-cd groupe01
-ls
-```
-✅ Tu vois au moins `README.md`, `matlab` et `ros2_foxy`.
-
-❌ `Authentication failed` : le token est mal collé, ou il n'a pas `read_repository`/`write_repository`. Refais l'étape 1.
-❌ `groupe01 existe déjà` : le dépôt a déjà été copié. Fais `cd groupe01 && git pull` et passe à l'étape 5.
-
----
-
-## Étape 5 : y mettre notre travail
-
-📍 **PC**, invite `e70348u@bi-fdd-f-l001:~/gitlab/groupe01$`
-```bash
+cd ~/gitlab/groupe01
 rm -rf ros2_foxy/be_limo
 unzip -o ~/ros2_ws/src/be-limo/livrables/livrable2_gitlab.zip
 ls ros2_foxy
 ```
 ✅ `be_limo` apparaît à côté de `room207_limo`.
 
-### 5.1. Mettre ton adresse de l'université (au lieu de Gmail)
-
+**Ton adresse de l'université au lieu de Gmail** :
 ```bash
 nano ros2_foxy/be_limo/package.xml
 ```
-Ligne `<maintainer email="...">` : remplace l'adresse Gmail par ton adresse universitaire. Enregistre (**Ctrl+O**, Entrée) et quitte (**Ctrl+X**). Fais de même dans :
-```bash
-nano ros2_foxy/be_limo/setup.py
-```
-ligne `maintainer_email='...'`.
+Sur la ligne `<maintainer email="...">`, remplace l'adresse Gmail. Enregistre (**Ctrl+O**, Entrée) et quitte (**Ctrl+X**). Fais de même dans `nano ros2_foxy/be_limo/setup.py` (ligne `maintainer_email='...'`).
 
-### 5.2. Vérifier le nom du dépôt dans le README
-
-Le README écrit le dépôt sous le nom `be-2026-group-01`. Si le nom noté à l'étape 2 est différent :
+**Nom du dépôt dans le README** : s'il n'est pas `be-2026-group-01` :
 ```bash
 grep -n "be-2026-group-01" README.md
 ```
 puis corrige les lignes affichées avec `nano README.md`.
 
-### 5.3. Vérifier ce qui va être envoyé
-
+**Vérifier ce qui va partir** :
 ```bash
 git status
 ```
-✅ Tu dois voir **seulement** :
-- `modifié : README.md`
-- `ros2_foxy/be_limo/` dans les fichiers non suivis
+✅ Seulement `modifié : README.md` et `ros2_foxy/be_limo/` (fichiers non suivis).
 
-❌ D'autres fichiers apparaissent : ne continue pas, et regarde ce que c'est.
-
----
-
-## Étape 6 : envoyer sur GitLab
+## A5. Envoyer sur GitLab
 
 📍 **PC**, invite `e70348u@bi-fdd-f-l001:~/gitlab/groupe01$`
-
-Ton nom et ton adresse de l'université apparaîtront comme auteur :
 ```bash
 git config user.name "Giovan ROCCA-DURINGER"
 git config user.email "TON_ADRESSE@etu.univ-lorraine.fr"
-```
-Puis :
-```bash
 git add README.md ros2_foxy/be_limo
 git commit -m "Livrable 2 : planification, contrôle et détection en simulation"
 git push
 ```
 ✅ Les dernières lignes ressemblent à `main -> main` (ou `master -> master`).
+❌ `rejected ... (fetch first)` : quelqu'un a envoyé quelque chose entre-temps. Fais `git pull --rebase` puis `git push`.
+❌ `You are not allowed to push` / `403` : pas le rôle Developer, ou branche protégée. Voir « Vérifier tes droits », ou passe par la méthode B avec une *merge request*.
 
-❌ `rejected ... (fetch first)` : quelqu'un du groupe a envoyé quelque chose entre-temps.
-```bash
-git pull --rebase
-git push
-```
-❌ `You are not allowed to push` ou `403` : ton compte n'a pas le rôle *Developer* sur le dépôt, ou la branche est protégée. Demande à l'enseignant, ou passe par une **Merge request** (GitLab le propose dans le message d'erreur).
+➡️ Passe à la partie **C**.
 
 ---
 
-## Étape 7 : vérifier sur GitLab
+# B. Méthode à la main, dans le navigateur
+
+Pas de terminal ni de token : tout se fait sur gitlab.univ-lorraine.fr.
+
+## B1. Récupérer et décompresser le zip
+
+1. Télécharge `livrable2_gitlab.zip` :
+   - depuis notre GitHub : **github.com/GiovanRD/be-limo** → dossier **livrables** → `livrable2_gitlab.zip` → bouton **Download** (icône de téléchargement en haut à droite du fichier) ;
+   - ou depuis la conversation où tu l'as reçu.
+2. Décompresse-le : clic droit sur le fichier → **Extraire ici**.
+3. Tu obtiens :
+   ```text
+   README.md
+   ros2_foxy/
+   └── be_limo/
+   ```
+
+**Ton adresse de l'université au lieu de Gmail** : ouvre `ros2_foxy/be_limo/package.xml` et `ros2_foxy/be_limo/setup.py` avec un éditeur de texte, remplace l'adresse Gmail, enregistre.
+**Nom du dépôt** : s'il n'est pas `be-2026-group-01`, ouvre `README.md`, cherche (Ctrl+F) `be-2026-group-01` et corrige.
+
+## B2. Ouvrir l'éditeur web de GitLab (Web IDE)
+
+1. Ouvre le dépôt **BE-2026-Group-01** sur GitLab.
+2. Clique sur **Edit** → **Web IDE** (ou appuie sur la touche **.** du clavier sur la page du dépôt).
+3. Un éditeur ressemblant à VS Code s'ouvre, avec la liste des fichiers du dépôt à gauche.
+
+## B3. Ajouter le dossier `be_limo`
+
+1. Dans la liste de gauche, déplie le dossier **ros2_foxy**.
+2. Depuis ton explorateur de fichiers, **glisse-dépose le dossier `be_limo`** (celui de `ros2_foxy/be_limo` décompressé) **sur le dossier `ros2_foxy`** du Web IDE.
+3. Vérifie que `ros2_foxy/be_limo/` apparaît, avec ses sous-dossiers `be_limo`, `launch`, `config`, `worlds`, `rviz`, `matlab`, `test`, `doc`, `resource` et les fichiers `README.md`, `package.xml`, `setup.py`, `setup.cfg`.
+
+❌ Le glisser-déposer de dossier ne marche pas (navigateur ou version de GitLab) : clic droit sur `ros2_foxy` → **New folder** `be_limo`, puis clic droit sur ce dossier → **Upload...** pour envoyer les fichiers, dossier par dossier. C'est plus long, mais ça marche partout. Pense à recréer chaque sous-dossier (`be_limo`, `launch`, `config`...) avant d'y envoyer ses fichiers.
+
+## B4. Remplacer le README à la racine
+
+1. Dans la liste de gauche, ouvre **README.md** (à la racine, pas celui de `be_limo`).
+2. Sélectionne tout (**Ctrl+A**) et supprime.
+3. Ouvre notre `README.md` décompressé avec un éditeur de texte, copie tout (**Ctrl+A**, **Ctrl+C**), puis colle-le dans le Web IDE (**Ctrl+V**).
+
+## B5. Enregistrer (commit)
+
+1. Clique sur l'icône **Source Control** dans la barre de gauche (les trois ronds reliés, avec un chiffre : le nombre de fichiers modifiés).
+2. Vérifie la liste : `README.md` modifié, et les fichiers de `ros2_foxy/be_limo/` ajoutés. **Rien d'autre.**
+3. Message : `Livrable 2 : planification, contrôle et détection en simulation`
+4. Clique sur **Commit and push to 'main'** (ou **Commit to 'main'**).
+   - Si GitLab propose **Create new branch** parce que `main` est protégée : accepte, puis crée la **merge request** proposée et fusionne-la (**Merge**). Si tu n'as pas le droit de fusionner, demande à l'enseignant.
+
+✅ Un message confirme le commit. En revenant sur la page du dépôt, la date du dernier commit est la tienne.
+
+➡️ Passe à la partie **C**.
+
+---
+
+# C. Vérifier et déposer sur Arche (les deux méthodes)
+
+## C1. Vérifier sur GitLab
 
 Ouvre le dépôt **BE-2026-Group-01** dans le navigateur :
 
 - [ ] la page d'accueil affiche **notre README** (titre « BE Véhicule Autonome 2026 — Groupe 1 ») ;
 - [ ] le dossier **`ros2_foxy/be_limo`** existe, avec `be_limo/`, `launch/`, `config/`, `worlds/`, `matlab/`, `test/`, `README.md` ;
-- [ ] les images de `ros2_foxy/be_limo/README.md` s'affichent (carte des nœuds) ;
-- [ ] il n'y a **pas** de `CLAUDE.md`, ni les dossiers `limo/`, `environment/`.
+- [ ] `ros2_foxy/be_limo/be_limo/` contient bien les fichiers `.py` (ex. `pure_pursuit.py`, `global_planner_node.py`) ;
+- [ ] la carte des nœuds s'affiche dans `ros2_foxy/be_limo/README.md` ;
+- [ ] il n'y a **pas** de `CLAUDE.md`, ni de dossiers `limo/` ou `environment/` ;
+- [ ] `ros2_foxy/room207_limo` et `matlab/` (fournis par le labo) sont toujours là.
 
----
+## C2. Déposer le lien sur Arche
 
-## Étape 8 : déposer le lien sur Arche
-
-1. Copie l'adresse de la page d'accueil du dépôt, dans la barre du navigateur. Elle ressemble à
+1. Copie l'adresse de la **page d'accueil** du dépôt (barre du navigateur). Elle ressemble à
    `https://gitlab.univ-lorraine.fr/coll/l-inp/ensem/robotic_lab/students/be/be-2026-group-01`
-   (pas l'adresse en `.git` de l'étape 2).
+   (pas l'adresse en `.git`).
 2. Sur Arche, ligne **16/11/2026 — L2.1–L3.1** → **Déposer** → colle le lien → valide.
 
 ---
 
 ## Avant de déposer : tester la démonstration
 
-L'enseignant va suivre le README : vérifiez que la démonstration se lance chez vous. Notre copie GitHub contient le même paquet, déjà dans le workspace :
+L'enseignant suivra le README : vérifiez que la démonstration se lance chez vous. Notre copie GitHub contient le même paquet, déjà dans le workspace :
 
 📍 **PC**, invite `e70348u@bi-fdd-f-l001:~$`
 ```bash
@@ -202,13 +237,11 @@ Notez ce qui se passe et prenez des captures d'écran : elles serviront pour l'o
 
 ## Récapitulatif
 
-| # | Où | Quoi |
+| # | Méthode A (terminal) | Méthode B (navigateur) |
 |---|---|---|
-| 1 | GitLab (navigateur) | créer un token `write_repository` |
-| 2 | GitLab (navigateur) | copier l'adresse HTTPS du dépôt du groupe |
-| 3 | PC, `~/ros2_ws/src/be-limo` | `git pull` |
-| 4 | PC, `~/gitlab` | `git clone <adresse> groupe01` |
-| 5 | PC, `~/gitlab/groupe01` | `unzip -o .../livrable2_gitlab.zip`, corriger l'adresse e-mail et le nom du dépôt |
-| 6 | PC, `~/gitlab/groupe01` | `git add`, `git commit`, `git push` |
-| 7 | GitLab (navigateur) | vérifier README et `ros2_foxy/be_limo` |
-| 8 | Arche | déposer le lien du dépôt |
+| 1 | créer un token `write_repository` | télécharger et décompresser le zip |
+| 2 | `git pull` du GitHub | corriger e-mail et nom du dépôt dans les fichiers |
+| 3 | `git clone` du dépôt du groupe dans `~/gitlab` | ouvrir le Web IDE du dépôt |
+| 4 | `unzip -o` du zip, corriger e-mail et nom du dépôt | glisser `be_limo` dans `ros2_foxy` |
+| 5 | `git add`, `git commit`, `git push` | remplacer `README.md`, puis *Commit and push* |
+| 6 | **C** : vérifier sur GitLab, déposer le lien sur Arche | **C** : vérifier sur GitLab, déposer le lien sur Arche |
